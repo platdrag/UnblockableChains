@@ -1,0 +1,54 @@
+opMode: 'test'
+nodeRpcUrl : 'http://localhost:8546'
+
+solc: 'bin\\solc.exe'
+
+geth: 'bin\\geth.exe'
+BlockChainData: 'build\Server'
+
+
+keyGenScript: 'bin\\genpriv.sh'
+
+#interfaceDir : 'interface'
+contractUri : 'contract\UnstoppableCnC.sol'
+contractName : 'UnstoppableCnC'
+
+ownerWalletPassword : '123456' #If empty will be prompted for password each time.
+ownerWallet: #If empty a new account will be generated and written to AUTO conf file. Delete AUTO to regenerate
+
+gaslimit : 3000000
+
+allowedAddresses:
+  []
+
+genesisFile: 'build\genesis.json'
+genesis: '{
+ "config": {
+  "homesteadBlock": 0,
+  "eip158Block": 0,
+  "eip155Block": 0,
+  "chainId": 15
+ },
+ "coinbase": "0x0000000000000000000000000000000000000000",
+ "alloc": {},
+ "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "timestamp": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "nonce": "0x0000000000000042",
+  "gasLimit": "0x8000000",
+ "difficulty": "0x4000"
+}'
+
+gethCmd: ['geth','--lightserv','25',
+  '--rpc','--rpcaddr','127.0.0.1',
+  '--rpcport', '8546',
+  '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
+  '--datadir', '%DATADIR%',
+  '--networkid', '1234',
+  '--port', '30303',
+  '--ipcpath', '%DATADIR%\\geth.ipc',
+  '--etherbase', '%OWNERADDRESS%',
+  '--mine', '--minerthreads', '1', '--verbosity', '4' ]
+
+

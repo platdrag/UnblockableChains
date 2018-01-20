@@ -1,0 +1,29 @@
+nodeRpcUrl : 'http://localhost:%NODEPORT%' #Static
+#interfaceDir : 'interface'
+
+contract:
+  name :  #Static
+  abi: #get from deployContract
+  address: #get from deployContract
+
+geth: 'bin\geth.exe' #Static
+BlockChainData: 'build\Client%CLIENT_NUM%' #Add Client #
+
+clientWalletPassword : #To be generated in generateNewClient
+clientWallet:  #To be generated in generateNewClient
+
+genesisFile: 'build\genesisClient.json' #
+genesis: # copy from server genesis (remove addresses) on
+
+opMode: 'test'
+enode: #server enode
+
+gethCmd: ['geth',' --syncmode','light',
+  '--rpc','--rpcaddr','127.0.0.1',
+  '--rpcport', '%NODEPORT%',
+  '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
+  '--datadir', '%DATADIR%',
+  '--networkid', '1234',
+  '--port', '30303',
+  '--ipcpath', '%DATADIR%\geth.ipc',
+  '--verbosity', '4' ]
