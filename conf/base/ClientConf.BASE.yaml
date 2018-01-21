@@ -6,8 +6,8 @@ contract:
   abi: #get from deployContract
   address: #get from deployContract
 
-geth: 'bin\geth.exe' #Static
-BlockChainData: 'build\Client%CLIENT_NUM%' #Add Client #
+geth: &gethBin 'bin\geth.exe' #Static
+BlockChainData: 'build\Client%CLIENT_ID%' #Add Client #
 
 clientWalletPassword : #To be generated in generateNewClient
 clientWallet:  #To be generated in generateNewClient
@@ -18,7 +18,7 @@ genesis: # copy from server genesis (remove addresses) on
 opMode: 'test'
 enode: #server enode
 
-gethCmd: ['geth',' --syncmode','light',
+gethCmd: [*gethBin,' --syncmode','light',
   '--rpc','--rpcaddr','127.0.0.1',
   '--rpcport', '%NODEPORT%',
   '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',

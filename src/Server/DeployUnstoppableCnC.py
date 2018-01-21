@@ -17,6 +17,7 @@ import signal
 import atexit
 
 
+l = LogWrapper.getLogger()
 
 def deployContract (web3, conf):
 	#with open ('UnstoppableCnC.sol') as f:
@@ -94,7 +95,7 @@ def runGethNode(conf, freshStart = False):
 				json.dump(genesis,f, indent=1)
 
 			l.info('Initializing blockchain...')
-			command =' '.join(['geth','--datadir',conf['BlockChainData'],'init',conf['genesisFile']])
+			command =' '.join([conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile']])
 
 			l.debug('Running geth init: ' , command)
 			with open(opj('logs', 'geth.server.log'), 'a') as f:
@@ -136,91 +137,47 @@ def killGeth(proc):
 	kill_proc(proc)
 
 
-def generateKeyPair (conf) -> (str,str):
-	'''
-	Use openssl to generate a secp256k1 key pair to be used in ethereum.
-	Windows users uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
-	Under linux script runs natively.
-	:param scriptFile: config with keyGenScript correctly set.
-	:return: public, private as hex string format
-	'''
 
-	path = os.path.abspath(conf['keyGenScript'])
-	if os.name == 'nt':
-		path = Win2LinuxPathConversion(path)
-		l.debug("NT: running bash keyGenScript script at ",path)
-		proc = runCommand('bash '+path)
-	else:
-		l.debug("POSIX: running native keyGenScript script at " , path)
-		proc = runCommand(path)
 
-	stdoutdata, stderrdata = proc.communicate()
 
-	if proc.returncode:
-		raise ValueError(format_error_message(
-			"Error trying to create a new account",
-			path,
-			proc.returncode,
-			stdoutdata,
-			stderrdata,
-		))
-	stdoutdata = ast.literal_eval(stdoutdata.decode('utf-8'))
-	return stdoutdata['pub'],stdoutdata['priv']
-
-def getOwnerPassword (conf, msg = 'Enter password to unlock owner wallet'):
-	return conf['ownerWalletPassword'] if conf['ownerWalletPassword'] \
-		else getpass.getpass(msg)
 
 def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 	ownerChanged = False
 	if not conf['ownerWallet'] or regenerateOwnerAccount:
 		l.info("No account set. Generating a new account")
-		public,private = generateKeyPair(conf)
-		password = getOwnerPassword(conf, "Choose account password. Please remember it as it won't be written anywhere!")
-
-		conf['ownerWallet'] = str(make_keystore_json(private[2:].encode('utf-8'),password))
+		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] =  generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
 
 		l.info('Generated new owner wallet. Persisting changes to conf file')
 		with open(opj('conf', 'gen', 'DeploymentConf.AUTO.yaml'),'w') as f:
 			yaml.safe_dump({'ownerWallet':conf['ownerWallet']}, f)
 
-		conf['ownerPublic'] = public
-		conf['ownerAddress'] = '0x'+ encode_hex(pubtoaddr(public[2:].encode('utf-8')))
-		conf['ownerPrivate'] = private
 		ownerChanged = True
 	else:
-		l.info("Unlocking owner wallet...")
-		password = getOwnerPassword (conf)
-		private = decode_keystore_json(ast.literal_eval(conf['ownerWallet']),password)
-
-		conf['ownerPublic'] = '0x' + encode_hex(privtopub(private))
-		conf['ownerAddress'] = '0x' + encode_hex(privtoaddr(private))
-		conf['ownerPrivate'] = '0x' + bytes.decode(private,'utf-8')
+		l.info("Loading owner wallet...")
+		conf['ownerPublic'], conf['ownerPrivate'], conf['ownerAddress'] = loadWallet(conf['ownerWallet'], conf['ownerWalletPassword'])
 
 	l.info ('User Account Details:')
 	l.info('\tPublic key:',conf['ownerPublic'])
 	l.info('\tAddress:',conf['ownerAddress'])
 	l.debug('\tPrivate key:',conf['ownerPrivate'])
-
-
-
 	return ownerChanged
 
-def unlockAccount(address, password, duration = None):
-	unlocked = web3.personal.unlockAccount(conf['ownerAddress'], getOwnerPassword(conf), duration=None)
+def unlockAccount(address, password, web3, duration = None):
+	password = getOwnerPassword(password)
+	unlocked = web3.personal.unlockAccount(address, password, duration)
 	if not unlocked:
-		raise ValueError('Unable to unlock owner account. wrong password?')
-	l.info('Successfully unlocked owner account.')
+		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
+	l.info('Successfully unlocked wallet',address)
 
 
 def registerOwnerAccount(web3, conf):
 	if not conf['ownerAddress'] in web3.personal.listAccounts:
-		address = web3.personal.importRawKey(conf['ownerPrivate'], getOwnerPassword (conf))
+		address = web3.personal.importRawKey(conf['ownerPrivate'], getOwnerPassword (conf['ownerWalletPassword']))
 		assert(address==conf['ownerAddress'])
 		l.info('registered owner account ', conf['ownerAddress'])
 	l.info('Owner account Balance: ',str(web3.eth.getBalance(conf['ownerAddress'])))
 
-	unlockAccount(address,password)
+	unlockAccount(conf['ownerAddress'],conf['ownerWalletPassword'], web3)
 
 
 
@@ -249,6 +206,7 @@ def generateServerConf(web3, conf):
 	serverConf['nodeRpcUrl'] = conf['nodeRpcUrl']
 	serverConf['ownerWalletPassword'] = conf['ownerWalletPassword']
 	serverConf['ownerAddress'] = conf['ownerAddress']
+	serverConf['keyGenScript'] = conf['keyGenScript']
 
 	with open(opj('conf', 'gen', 'ServerConf.yaml'), 'w') as f:
 		yaml.safe_dump(serverConf, f)
@@ -260,11 +218,6 @@ def loadConf():
 	return conf
 
 if __name__ == "__main__":
-	_logger = logging.getLogger('root')
-	FORMAT = "[%(funcName)7s()] %(message)s"
-	logging.basicConfig(format=FORMAT)
-	_logger.setLevel(logging.DEBUG)
-	l = LogWrapper(_logger)
 
 	l.info ("base dir ",sys.argv[1])
 	os.chdir(sys.argv[1])

@@ -1,7 +1,17 @@
 import logging
 import sys
 
+
 class LogWrapper():
+
+    @classmethod
+    def getLogger(cls):
+        _logger = logging.getLogger('root')
+        FORMAT = "[%(funcName)7s()] %(message)s"
+        logging.basicConfig(format=FORMAT)
+        _logger.setLevel(logging.DEBUG)
+        return LogWrapper(_logger)
+
 
     def __init__(self, logger):
         self.logger = logger

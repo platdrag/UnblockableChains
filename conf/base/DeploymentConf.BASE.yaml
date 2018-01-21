@@ -1,13 +1,13 @@
 opMode: 'test'
 nodeRpcUrl : 'http://localhost:8546'
 
-solc: 'bin\\solc.exe'
+solc: 'bin\solc.exe'
 
-geth: 'bin\\geth.exe'
+geth: &gethbin 'bin\geth.exe'
 BlockChainData: 'build\Server'
 
 
-keyGenScript: 'bin\\genpriv.sh'
+keyGenScript: 'bin\genpriv.sh'
 
 #interfaceDir : 'interface'
 contractUri : 'contract\UnstoppableCnC.sol'
@@ -40,14 +40,14 @@ genesis: '{
  "difficulty": "0x4000"
 }'
 
-gethCmd: ['geth','--lightserv','25',
+gethCmd: [*gethbin,'--lightserv','25',
   '--rpc','--rpcaddr','127.0.0.1',
   '--rpcport', '8546',
   '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
   '--datadir', '%DATADIR%',
   '--networkid', '1234',
   '--port', '30303',
-  '--ipcpath', '%DATADIR%\\geth.ipc',
+  '--ipcpath', '%DATADIR%\geth.ipc',
   '--etherbase', '%OWNERADDRESS%',
   '--mine', '--minerthreads', '1', '--verbosity', '4' ]
 

@@ -3,3 +3,4 @@ build/*
 logs/*
 conf/gen/*
 *.pyc
+generated/*

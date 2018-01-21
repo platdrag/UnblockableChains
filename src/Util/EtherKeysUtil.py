@@ -1,13 +1,66 @@
+import yaml, ast, json,getpass
+import os, string, random
+from Util.Process import *
+from Util.LogWrapper import *
+from Util.keys import *
 
-from web3 import Web3
+l = LogWrapper.getLogger()
+
+def generateKeyPair (keyGenScript) -> (str,str):
+	'''
+	Use openssl to generate a secp256k1 key pair to be used in ethereum.
+	Windows users uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
+	Under linux script runs natively.
+	:param scriptFile: config with keyGenScript correctly set.
+	:return: public, private as hex string format
+	'''
+
+	path = os.path.abspath(keyGenScript)
+	if os.name == 'nt':
+		path = Win2LinuxPathConversion(path)
+		l.debug("NT: running bash keyGenScript script at ",path)
+		proc = runCommand('bash '+path)
+	else:
+		l.debug("POSIX: running native keyGenScript script at " , path)
+		proc = runCommand(path)
+
+	stdoutdata, stderrdata = proc.communicate()
+
+	if proc.returncode:
+		raise ValueError(format_error_message(
+			"Error trying to create a new account",
+			path,
+			proc.returncode,
+			stdoutdata,
+			stderrdata,
+		))
+	stdoutdata = ast.literal_eval(stdoutdata.decode('utf-8'))
+	return stdoutdata['pub'],stdoutdata['priv']
+
+def generatePassword(size=12, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
+	return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
+
+def getOwnerPassword (password = None, msg = 'Enter password to unlock owner wallet'):
+	return getpass.getpass(msg) if not password else password
 
 
-def derivePublicKey(privKey, password = None):
-    #TODO: complete!!!
-    return "0xaf80b90d25145da28c583359beb47b21796b2fe1a23c1511e443e7a64dfdb27d7434c380f0aa4c500e220aa1a9d068514b1ff4d5019e624e7ba1efe82b340a59"
+def generateWallet(keyGenScript, password = None):
 
-def deriveAddress(pubkey):
-    return '0x'+Web3.sha3(pubkey)[-40:]
+    public, private = generateKeyPair(keyGenScript)
+    password = getOwnerPassword(password, "Choose account password. Please remember it as it won't be written anywhere!")
 
+    walletJson = str(make_keystore_json(private[2:].encode('utf-8'), password))
+    address =  '0x' + encode_hex(pubtoaddr(public[2:].encode('utf-8')))
 
+    return walletJson, public, private, address
+
+def loadWallet(walletJson, password = None):
+	password = getOwnerPassword(password)
+	private = decode_keystore_json(ast.literal_eval(walletJson), password)
+
+	public = '0x' + encode_hex(privtopub(private))
+	address = '0x' + encode_hex(privtoaddr(private))
+	private = '0x' + bytes.decode(private, 'utf-8')
+
+	return public, private, address
 
