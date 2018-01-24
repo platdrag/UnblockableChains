@@ -89,8 +89,11 @@ class ServerCommands:
         # Package the Code
         #TODO add all components
         os.makedirs(opj('generated', address,'conf'), exist_ok=True)
-        with open(opj('generated', address, 'conf', 'clientConf.yaml'), 'w') as f:
+        os.makedirs(opj('src', address, 'conf'), exist_ok=True)
+        os.makedirs(opj('bin', address, 'conf'), exist_ok=True)
+        with open(opj('generated', address, 'conf', 'clientConf-test.yaml'), 'w') as f:
             yaml.safe_dump(clientConfTemplate, f)
+
         #Call allowInstance in Contract to register it
         self.contract.allowInstance(address, transact={'from': sc.ownerAddress})
         #Transfer funds to wallet.

@@ -25,5 +25,5 @@ gethCmd: [*gethBin,' --syncmode','light',
   '--datadir', '%DATADIR%',
   '--networkid', '1234',
   '--port', '30303',
-  '--ipcpath', '%DATADIR%\geth.ipc',
+  '--ipcpath', '%DATADIR%\geth.ipc', --nodiscover
   '--verbosity', '4' ]

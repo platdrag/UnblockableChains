@@ -2,7 +2,7 @@ import yaml
 import os
 import sys
 import getpass
-from os.path import join as opj
+from os.path import join as opj , exists as exists
 import logging
 import yaml, ast, json
 from solc import compile_source
@@ -30,9 +30,9 @@ def deployContract (web3, conf):
 	# Instantiate and deploy contract
 	contract = web3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
 
-	tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], },
+	tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], 'gas':conf['gaslimit'] },
 		args=(conf['ownerPublic'], conf['allowedAddresses']))
-	l.debug('transcation deploy contract, tx_hash:',tx_hash)
+	l.debug('transaction deploy contract, tx_hash:',tx_hash)
 
 	# Get tx receipt to get contract address
 	tx_receipt = None
@@ -88,7 +88,7 @@ def runGethNode(conf, freshStart = False):
 			shutil.rmtree(conf['BlockChainData'],ignore_errors=True)
 
 			l.debug('Generating genesis file. Preallocating some coins to owner ',conf['ownerAddress'],' balance')
-			genesis['alloc'][conf['ownerAddress']] = { "balance": "300000000" }
+			genesis['alloc'][conf['ownerAddress']] = { "balance": "300000000000000000" }
 			genesis['coinbase'] = conf['ownerAddress']
 
 			with open(conf['genesisFile'],'w') as f:
@@ -133,9 +133,6 @@ def runGethNode(conf, freshStart = False):
 
 	return proc
 
-def killGeth(proc):
-	kill_proc(proc)
-
 
 
 
@@ -162,23 +159,6 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 	l.debug('\tPrivate key:',conf['ownerPrivate'])
 	return ownerChanged
 
-def unlockAccount(address, password, web3, duration = None):
-	password = getOwnerPassword(password)
-	unlocked = web3.personal.unlockAccount(address, password, duration)
-	if not unlocked:
-		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
-	l.info('Successfully unlocked wallet',address)
-
-
-def registerOwnerAccount(web3, conf):
-	if not conf['ownerAddress'] in web3.personal.listAccounts:
-		address = web3.personal.importRawKey(conf['ownerPrivate'], getOwnerPassword (conf['ownerWalletPassword']))
-		assert(address==conf['ownerAddress'])
-		l.info('registered owner account ', conf['ownerAddress'])
-	l.info('Owner account Balance: ',str(web3.eth.getBalance(conf['ownerAddress'])))
-
-	unlockAccount(conf['ownerAddress'],conf['ownerWalletPassword'], web3)
-
 
 
 def generateClientsTemplates(web3, conf):
@@ -188,8 +168,7 @@ def generateClientsTemplates(web3, conf):
 	confBase['contract']['address'] = conf['contractDeployedAddress']
 
 	if conf['opMode'] == 'test':
-		genesis = ast.literal_eval(conf['genesis'])
-		confBase['genesis'] = genesis
+		confBase['genesis'] = conf['genesis']
 
 	confBase['enode'] = web3.admin.nodeInfo['enode']
 
@@ -213,7 +192,8 @@ def generateServerConf(web3, conf):
 
 def loadConf():
 	confBase = yaml.safe_load(open(opj('conf', 'base', 'DeploymentConf.BASE.yaml')))
-	confAuto = yaml.safe_load(open(opj('conf', 'gen', 'DeploymentConf.AUTO.yaml')))
+	cafile = opj('conf', 'gen', 'DeploymentConf.AUTO.yaml')
+	confAuto = yaml.safe_load(open(cafile)) if exists(cafile) else None
 	conf = {**confBase, **(confAuto if confAuto else {})}
 	return conf
 
@@ -233,13 +213,16 @@ if __name__ == "__main__":
 	gethProc = runGethNode(conf, ownerChanged)
 
 	atexit.register(
-		lambda : killGeth(gethProc))
+		lambda : kill_proc(gethProc))
 
 	#Connecting to the get Node
 	web3 = Web3(HTTPProvider(conf['nodeRpcUrl']))
 
+	l.debug("Staring miners...")
+	web3.miner.start(1)#For some reason geth doensnt auto start miners...8|
+	#time.sleep(5) #let mining works for few seconds...
 	#Registering the owner account to the node, unlocking the account.
-	registerOwnerAccount(web3, conf)
+	registerAccount(web3, conf['ownerAddress'], conf['ownerPrivate'], conf['ownerWalletPassword'])
 
 	#deploying the contract to the blockchain
 	contract = deployContract (web3, conf)

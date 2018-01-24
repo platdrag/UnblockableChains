@@ -36,11 +36,11 @@ genesis: '{
  "timestamp": "0x0000000000000000000000000000000000000000000000000000000000000000",
  "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
  "nonce": "0x0000000000000042",
-  "gasLimit": "0x8000000",
+ "gasLimit": "0x8000000",
  "difficulty": "0x4000"
 }'
-
-gethCmd: [*gethbin,'--lightserv','25',
+#'--lightserv','25',
+gethCmd: [*gethbin,
   '--rpc','--rpcaddr','127.0.0.1',
   '--rpcport', '8546',
   '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
@@ -48,7 +48,7 @@ gethCmd: [*gethbin,'--lightserv','25',
   '--networkid', '1234',
   '--port', '30303',
   '--ipcpath', '%DATADIR%\geth.ipc',
-  '--etherbase', '%OWNERADDRESS%',
-  '--mine', '--minerthreads', '1', '--verbosity', '4' ]
+  '--etherbase', '%OWNERADDRESS%', --nodiscover
+  '--mine', '--minerthreads', '2', '--verbosity', '4' ]
 
 
