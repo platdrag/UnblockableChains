@@ -8,14 +8,14 @@ from .timeout import (
     Timeout,
 )
 
-def runCommand(command,
+def runCommand(cmd_arr,
                stdin=subprocess.PIPE,
                stdout=subprocess.PIPE,
                stderr=subprocess.PIPE):
 
 
     proc = subprocess.Popen(
-        command,
+        cmd_arr,
         stdin=stdin,
         stdout=stdout,
         stderr=stderr,

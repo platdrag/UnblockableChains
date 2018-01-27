@@ -19,10 +19,10 @@ def generateKeyPair (keyGenScript) -> (str,str):
 	if os.name == 'nt':
 		path = Win2LinuxPathConversion(path)
 		l.debug("NT: running bash keyGenScript script at ",path)
-		proc = runCommand('bash '+path)
+		proc = runCommand(['bash', path])
 	else:
 		l.debug("POSIX: running native keyGenScript script at " , path)
-		proc = runCommand(path)
+		proc = runCommand([path])
 
 	stdoutdata, stderrdata = proc.communicate()
 
