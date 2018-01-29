@@ -64,18 +64,17 @@ def loadWallet(walletJson, password = None):
 
 	return public, private, address
 
-def unlockAccount(address, password, web3, duration = None):
+def unlockAccount(address, password, web3, duration = 0):
 	password = getOwnerPassword(password)
 	unlocked = web3.personal.unlockAccount(address, password, duration)
 	if not unlocked:
 		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
 	l.info('Successfully unlocked wallet',address)
 
-def registerAccount(web3, currentAddress, private, password):
+def importAccountToNode(web3, currentAddress, private, password):
 	if not currentAddress in web3.personal.listAccounts:
 		address = web3.personal.importRawKey(private, getOwnerPassword (password))
 		assert(address == currentAddress)
-		l.info('registered Account ', currentAddress)
-	l.info('Account Balance: ',str(web3.eth.getBalance(currentAddress)))
-
+		l.info('Account', currentAddress, 'imported to local node')
+	l.info('Account Balance: ',str(web3.fromWei(web3.eth.getBalance(currentAddress), "ether")))
 	unlockAccount(currentAddress,password, web3)

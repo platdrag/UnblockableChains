@@ -20,10 +20,10 @@ enode: #server enode
 
 gethCmd: [*gethBin,' --syncmode','light',
   '--rpc','--rpcaddr','127.0.0.1',
-  '--rpcport', '%NODEPORT%',
+  '--rpcport', '%RPCPORT%',
   '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
   '--datadir', '%DATADIR%',
   '--networkid', '1234',
-  '--port', '30303',
-  '--ipcpath', '%DATADIR%\geth.ipc', --nodiscover
+  '--port', '%NODEPORT%',
+  '--ipcpath', '%DATADIR%\geth.ipc', '--nodiscover',
   '--verbosity', '4' ]

@@ -3,10 +3,11 @@ import re
 import os
 import signal
 import time
+from Util.timeout import TimeoutException
+from .timeout import Timeout
+from .LogWrapper import *
 
-from .timeout import (
-    Timeout,
-)
+l = LogWrapper.getLogger()
 
 def runCommand(command,
                stdin=subprocess.PIPE,
@@ -91,3 +92,20 @@ def format_error_message(prefix, command, return_code, stdoutdata, stderrdata):
         lines.append("stderr: N/A")
 
     return "\n".join(lines)
+
+
+def waitFor(operation, emptyResponse=None, pollInterval=0.5, maxRetries=10):
+
+    res = emptyResponse
+    retries = -1
+    while res == emptyResponse:
+        #l.debug('trying',str(operation),'attempt',retries,'of',maxRetries)
+        res = operation()
+
+        time.sleep(pollInterval)
+        retries +=1
+        if retries > maxRetries:
+            raise TimeoutException("Unable to get a response for "+str(operation)+". Perhaps destination is not responding?")
+
+    l.debug("waiter",str(operation), 'executed in ', retries * pollInterval)
+    return res

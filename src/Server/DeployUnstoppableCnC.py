@@ -79,7 +79,7 @@ def runGethNode(conf, freshStart = False):
 				except OSError:
 					pass #all good because process wasn't running anymore
 
-	genesis = ast.literal_eval(conf['genesis'])
+	# genesis = conf['genesis']#ast.literal_eval()
 
 	if conf['opMode'] == 'test':
 		if freshStart:
@@ -88,11 +88,11 @@ def runGethNode(conf, freshStart = False):
 			shutil.rmtree(conf['BlockChainData'],ignore_errors=True)
 
 			l.debug('Generating genesis file. Preallocating some coins to owner ',conf['ownerAddress'],' balance')
-			genesis['alloc'][conf['ownerAddress']] = { "balance": "300000000000000000" }
-			genesis['coinbase'] = conf['ownerAddress']
+			conf['genesis']['alloc'][conf['ownerAddress']] = { "balance": "300000000000000000" }
+			conf['genesis']['coinbase'] = conf['ownerAddress']
 
 			with open(conf['genesisFile'],'w') as f:
-				json.dump(genesis,f, indent=1)
+				json.dump(conf['genesis'],f, indent=1)
 
 			l.info('Initializing blockchain...')
 			command =' '.join([conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile']])
@@ -168,6 +168,8 @@ def generateClientsTemplates(web3, conf):
 	confBase['contract']['address'] = conf['contractDeployedAddress']
 
 	if conf['opMode'] == 'test':
+		# with open(conf['genesisFile'], 'r') as f:
+		# 	confBase['genesis'] = str(json.load(f))
 		confBase['genesis'] = conf['genesis']
 
 	confBase['enode'] = web3.admin.nodeInfo['enode']
@@ -218,11 +220,12 @@ if __name__ == "__main__":
 	#Connecting to the get Node
 	web3 = Web3(HTTPProvider(conf['nodeRpcUrl']))
 
+	l.info("Node is up at:", web3.admin.nodeInfo.enode)
 	l.debug("Staring miners...")
 	web3.miner.start(1)#For some reason geth doensnt auto start miners...8|
 	#time.sleep(5) #let mining works for few seconds...
 	#Registering the owner account to the node, unlocking the account.
-	registerAccount(web3, conf['ownerAddress'], conf['ownerPrivate'], conf['ownerWalletPassword'])
+	importAccountToNode(web3, conf['ownerAddress'], conf['ownerPrivate'], conf['ownerWalletPassword'])
 
 	#deploying the contract to the blockchain
 	contract = deployContract (web3, conf)

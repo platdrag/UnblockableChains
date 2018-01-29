@@ -22,24 +22,18 @@ allowedAddresses:
   []
 
 genesisFile: 'build\genesis.json'
-genesis: '{
- "config": {
-  "homesteadBlock": 0,
-  "eip158Block": 0,
-  "eip155Block": 0,
-  "chainId": 15
- },
- "coinbase": "0x0000000000000000000000000000000000000000",
- "alloc": {},
- "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
- "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
- "timestamp": "0x0000000000000000000000000000000000000000000000000000000000000000",
- "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
- "nonce": "0x0000000000000042",
- "gasLimit": "0x8000000",
- "difficulty": "0x4000"
-}'
-#'--lightserv','25',
+genesis:
+  alloc: {}
+  coinbase: ''
+  config: {chainId: 15, eip155Block: 0, eip158Block: 0, homesteadBlock: 0}
+  difficulty: '0x4000'
+  extraData: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  gasLimit: '0x8000000'
+  mixhash: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  nonce: '0x0000000000000042'
+  parentHash: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  timestamp: '0x0000000000000000000000000000000000000000000000000000000000000000'
+
 gethCmd: [*gethbin,
   '--rpc','--rpcaddr','127.0.0.1',
   '--rpcport', '8546',
@@ -48,7 +42,8 @@ gethCmd: [*gethbin,
   '--networkid', '1234',
   '--port', '30303',
   '--ipcpath', '%DATADIR%\geth.ipc',
-  '--etherbase', '%OWNERADDRESS%', --nodiscover
+  '--etherbase', '%OWNERADDRESS%', '--nodiscover',
+#  '--lightserv','25',
   '--mine', '--minerthreads', '2', '--verbosity', '4' ]
 
 

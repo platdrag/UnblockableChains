@@ -1,6 +1,9 @@
 import time
 
 
+class TimeoutException (Exception):
+    pass
+
 class Timeout(Exception):
     """
     A limited subset of the `gevent.Timeout` context manager.
