@@ -95,24 +95,27 @@ def runGethNode(conf, freshStart = False):
 				json.dump(conf['genesis'],f, indent=1)
 
 			l.info('Initializing blockchain...')
-			command =' '.join([conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile']])
+			cmd = [conf['geth'],
+					'--datadir',
+					conf['BlockChainData'],
+					'init',
+					conf['genesisFile']
+					]
 
-			l.debug('Running geth init: ' , command)
+			l.debug('Running geth init: ' , ' '.join(cmd))
 			with open(opj('logs', 'geth.server.log'), 'a') as f:
-				proc = runCommand(command, stdout=f)
+				proc = runCommand(cmd, stdout=f)
 				proc.communicate()
 	elif conf['opMode'] == 'TestNet':
 		pass
 	elif conf['opMode'] == 'RealNet':
 		pass
 
-	l.info('Running geth node...')
-	command = ' '.join(conf['gethCmd'])
-	command = command.replace('%DATADIR%',conf['BlockChainData'])
-	command = command.replace('%OWNERADDRESS%', conf['ownerAddress'])
-	l.debug('Running main geth : ' , command)
-
-	proc = runCommand(command, stderr=open(opj('logs', 'geth.server.log'), 'a'))
+	cmd = conf['gethCmd']
+	cmd = [x.replace('%DATADIR%', conf['BlockChainData']) for x in cmd]
+	cmd = [x.replace('%OWNERADDRESS%', conf['ownerAddress']) for x in cmd]
+	l.info('Running geth node: cmd: ', ' '.join(cmd))
+	proc = runCommand(cmd, stderr=open(opj('logs', 'geth.server.log'), 'a'))
 
 	if proc.returncode:
 		std,sterr = proc.communicate()

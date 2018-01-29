@@ -188,11 +188,15 @@ class ClientCommands:
 					json.dump(conf['genesis'], f, indent=1)
 
 				l.info('Initializing blockchain...')
-				command =' '.join([conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile']])
+				cmd = [conf['geth'],
+						'--datadir',
+						conf['BlockChainData'],
+						'init',
+						conf['genesisFile']]
 
-				l.debug('Running geth init: ' , command)
+				l.debug('Running geth init: ' , ' '.join(cmd))
 				with open(opj('logs', 'geth.server.log'), 'a') as f:
-					proc = runCommand(command, stdout=f)
+					proc = runCommand(cmd, stdout=f)
 					proc.communicate()
 		elif conf['opMode'] == 'TestNet':
 			pass
@@ -200,16 +204,16 @@ class ClientCommands:
 			pass
 
 		l.info('Running geth node...')
-		command = ' '.join(conf['gethCmd'])
-		l.debug('Running light geth : ' , command)
+		cmd = conf['gethCmd']
+		l.debug('Running light geth : ' , ' '.join(cmd))
 
-		proc = runCommand(command, stderr=open(opj('logs', 'geth.client.log'), 'a'))
+		proc = runCommand(cmd, stderr=open(opj('logs', 'geth.client.log'), 'a'))
 
 		if proc.returncode:
 			std,sterr = proc.communicate()
 			raise ValueError(format_error_message(
 				"Error trying to run geth node",
-				command,
+				cmd,
 				proc.returncode,
 				std,
 				sterr,
