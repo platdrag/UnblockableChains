@@ -1,25 +1,18 @@
-
-import yaml
-import os,time, sys
+import time, sys, json, signal, shutil, atexit, yaml
 from os.path import join as opj
-
-import yaml
-from solc import compile_source
 from web3 import Web3, HTTPProvider
 
 import Client.OsInteractions as OsInteractions
-from Util.EtherKeysUtil import *
 from web3.utils.events import get_event_data
 from web3.utils.abi import filter_by_name,abi_to_signature
-from Util.SolidityTypeConversionUtil import *
-from Util.Process import waitFor
-import shutil, atexit
-from Util.EtherKeysUtil import *
-
 from web3.contract import ConciseContract
+from Util.SolidityTypeConversionUtil import *
+from Util.Process import waitFor, kill_proc
+from Util.EtherKeysUtil import *
+from Util.EtherTransaction import *
 
 
-REGISTRATION_EVENT_NAME = 'InstanceRegistered'
+REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
 from geth import DevGethProcess
 
@@ -29,7 +22,7 @@ l = LogWrapper.getLogger()
 class ClientCommands:
 
 	def __init__(self, confFile):
-		conf = yaml.safe_load(open(opj('conf','gen', confFile)))
+		conf = yaml.safe_load(open(confFile))
 
 		self.contractAddress = conf['contract']['address']
 		self.contractAbi = conf['contract']['abi']
@@ -75,20 +68,26 @@ class ClientCommands:
 		filter = self.web3.eth.filter({'from': self.address, 'fromBlock': currBlock})
 
 		try:
-			self.contract.registerInstance(self.machineId,transact={'from': self.address, 'gas':3000000})
+			machineIdHash = self.web3.sha3(self.machineId)
+			self.contract.registerInstance(machineIdHash, transact={'from': self.address, 'gas': 3000000})
 
-			logs = waitFor (lambda : filter.get(True),emptyResponse=[],pollInterval=1, maxRetries = 30)
-			# logs=[]
-			# while (not logs):
-			# 	logs = filter.get(True)
-			# 	time.sleep(0.5)
-			# 	#print ('iteration...')
+			self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
+																self.contractAbi,
+																self.contractAddress,
+																self.web3,
+																topicFilters=[self.web3.sha3(self.address)])
 
-			self.web3.eth.uninstallFilter(filter.filter_id)
-
-
-			self.sessionId = bytesToHexString(self.getLogData(REGISTRATION_EVENT_NAME, logs)[0]['args']['sessionId'])
-			l.info ('Successful registration! SessionId:',self.sessionId)
+			def callback(tx):
+				self.sessionId = bytesToHexString(getLogEventArg(tx, eventABI, 'sessionId'))
+				l.info('Successful registration! SessionId:', self.sessionId)
+			self.commandFilter.watch(callback)
+			waitForTransaction(self.commandFilter)
+			# logs = waitFor(lambda: filter.get(True), emptyResponse=[], pollInterval=1, maxRetries=30)
+            #
+			# self.web3.eth.uninstallFilter(filter.filter_id)
+            #
+			# self.sessionId = bytesToHexString(self.getLogData(REGISTRATION_EVENT_NAME, logs)[0]['args']['sessionId'])
+			# l.info('Successful registration! SessionId:', self.sessionId)
 		except Exception as e:
 			l.error("Error in returned log event:", e)
 			self.sessionId = None
@@ -121,9 +120,8 @@ class ClientCommands:
 		#TODO actual encryption
 		return msg
 
-	def getEventArg(self, tx, eventABI, arg):
-		data = get_event_data(eventABI, tx)
-		return data['args'][arg]
+
+
 
 	def mainLoop(self):
 			sleep = 1
@@ -137,20 +135,28 @@ class ClientCommands:
 			if self.registered():
 				try:
 					l.info('instance is now registered with server. waiting for work...')
-					eventABI = filter_by_name(COMMAND_PENDING_EVENT_NAME, self.contractAbi)[0]
-					eventSignature = abi_to_signature(eventABI)
-					eventHash = self.web3.sha3(encode_hex(eventSignature))
-					l.debug('eventSignature:',eventSignature,'eventHash:',eventHash)
-					self.commandFilter = self.web3.eth.filter({'from':self.contractAddress,
-										  'topics': [eventHash, self.web3.sha3(self.address)]})
+					self.commandFilter, eventABI = createLogEventFilter(COMMAND_PENDING_EVENT_NAME,
+										 self.contractAbi,
+										 self.contractAddress,
+										 self.web3,
+										 topicFilters = [self.web3.sha3(self.address)])
+					# eventABI = filter_by_name(COMMAND_PENDING_EVENT_NAME, self.contractAbi)[0]
+					# eventSignature = abi_to_signature(eventABI)
+					# eventHash = self.web3.sha3(encode_hex(eventSignature))
+					# l.debug('eventSignature:',eventSignature,'eventHash:',eventHash)
+					# self.commandFilter = self.web3.eth.filter({'from':self.contractAddress,
+					# 					  'topics': [eventHash, self.web3.sha3(self.address)]})
 					def onCommandArrival(tx):
 						l.debug('new command event:',tx)
 
-						command = self.getEventArg(tx, eventABI,'command')
+						command = getLogEventArg(tx, eventABI,'command')
+						cmdId = getLogEventArg(tx, eventABI, 'cmdId')
+
 						commandDec = self.decryptMessageFromServer(command)
-						l.info('Decrypted a new command from server:',commandDec)
+						l.info('Decrypted a new command from server. id:',cmdId,'cmd:',commandDec)
 
 						workResults = self.doWork(commandDec)
+						l.info('Command',cmdId, 'execution complete:', workResults)
 
 						workResultsEnc = self.encryptMessageForServer(workResults)
 						self.sendResults(workResultsEnc)
@@ -188,14 +194,10 @@ class ClientCommands:
 					json.dump(conf['genesis'], f, indent=1)
 
 				l.info('Initializing blockchain...')
-				cmd = [conf['geth'],
-						'--datadir',
-						conf['BlockChainData'],
-						'init',
-						conf['genesisFile']]
+				cmd = [conf['geth'],'--datadir',conf['BlockChainData'],	'init',	conf['genesisFile']]
 
 				l.debug('Running geth init: ' , ' '.join(cmd))
-				with open(opj('logs', 'geth.server.log'), 'a') as f:
+				with open(opj('logs', 'geth.client.log'), 'a') as f:
 					proc = runCommand(cmd, stdout=f)
 					proc.communicate()
 		elif conf['opMode'] == 'TestNet':
@@ -212,15 +214,9 @@ class ClientCommands:
 		if proc.returncode:
 			std,sterr = proc.communicate()
 			raise ValueError(format_error_message(
-				"Error trying to run geth node",
-				cmd,
-				proc.returncode,
-				std,
-				sterr,
-			))
+				"Error trying to run geth node",cmd,proc.returncode,std,sterr,))
 
 		atexit.register(lambda: kill_proc(proc))
-
 		time.sleep(3)
 
 		with open(gethLockFile,'w') as f:
@@ -231,9 +227,11 @@ class ClientCommands:
 
 if __name__ == "__main__":
 	l.info ("base dir ",sys.argv[1])
-	os.chdir(sys.argv[1])
 
-	cc = ClientCommands('clientConf-test.yaml')
+	os.chdir(sys.argv[1])
+	confFile = sys.argv[2]
+
+	cc = ClientCommands(confFile)
 
 	cc.mainLoop()
 	# cc.registerInstance()

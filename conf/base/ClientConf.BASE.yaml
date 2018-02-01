@@ -18,7 +18,8 @@ genesis: # copy from server genesis (remove addresses) on
 opMode: 'test'
 enode: #server enode
 
-gethCmd: [*gethBin,' --syncmode','light',
+#' --syncmode','light',
+gethCmd: [*gethBin,
   '--rpc','--rpcaddr','127.0.0.1',
   '--rpcport', '%RPCPORT%',
   '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',

