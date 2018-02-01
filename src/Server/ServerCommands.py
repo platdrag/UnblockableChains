@@ -5,9 +5,14 @@ from web3.contract import ConciseContract
 from Util.EtherKeysUtil import unlockAccount, generatePassword, generateWallet, loadWallet
 from Util.LogWrapper import LogWrapper
 from shutil import copyfile,copy
-
+from Util.EtherTransaction import *
 
 l = LogWrapper.getLogger()
+
+
+
+REGISTRATION_REQUEST_EVENT_NAME = 'RegistrationRequest'
+COMMAND_RESULT_EVENT_NAME = 'CommandResult'
 
 
 class ServerCommands:
@@ -32,7 +37,11 @@ class ServerCommands:
         l.info("contract owner wallet address:",self.ownerAddress)
         unlockAccount(self.ownerAddress, self.ownerPassword, self.web3)
 
-        self.instances = set()
+
+
+        self.instances = dict()
+
+        self.cmdId = 0
 
 
     def loadContract(self):
@@ -117,9 +126,143 @@ class ServerCommands:
 
         #TODO:Split the balance to a small amount up first in sendTransaction and add most of the funds in allowInstance, that way it will only be transfered if instance successfully registered.
 
-        self.instances.add(address)
+        self.instances[address] = dict()
+        self.instances[address]['public'] = public
+
 
         return clientConfTemplate
+
+    def decryptMessage(self, msg, decrypt=True):
+        if decrypt:
+            pass
+        # 	alice = pyelliptic.ecc()
+        # 	msg = alice.encrypt(msg,self.ownerPubKey)
+        return msg
+
+    def encryptMessage(self, instanceAddress, msg, encrypt=True):
+        public = self.instances[instanceAddress]['public']
+        if encrypt:
+            pass
+        # 	bob = pyelliptic.ecc()
+        # 	bob.decrypt()
+        return msg
+
+    def addWork (self, instanceAddress, command):
+        if instanceAddress in self.instances:
+            commandEnc = self.encryptMessage(instanceAddress,command)
+            instanceHash = self.web3.sha3(instanceAddress)
+            l.info("Command",self.cmdId," was sent to",instanceAddress)
+            self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': 3000000})
+            self.instances[instanceAddress]['commands'] = dict()
+            self.instances[instanceAddress]['commands'][self.cmdId] = [command, None]
+            self.cmdId += 1
+            return True
+        return False
+
+    def removeInstance (self, instanceAddress):
+        if instanceAddress in self.instances:
+            instanceHash = self.web3.sha3(instanceAddress)
+            l.info("disallowing ",instanceAddress)
+            self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+            return True
+        return False
+
+    def allowInstance (self, instanceAddress):
+        if instanceAddress in self.instances:
+            instanceHash = self.web3.sha3(instanceAddress)
+            l.info("allowing ",instanceAddress)
+            self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+            return True
+        return False
+
+
+    def registrationConfirmation (self, instanceAddress, sessionId):
+        if instanceAddress in self.instances:
+            instanceHash = self.web3.sha3(instanceAddress)
+            sessionId = self.encryptMessage(instanceAddress, sessionId)
+            l.info("sending successful registration confirmation to",instanceAddress)
+            self.contract.allowInstance(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': 3000000})
+            return True
+        return False
+
+
+
+    def startInstanceRegistrationRequestWatcher(self):
+            try:
+                l.info('Starting to watch for new instance registrations...')
+                self.regRequestFilter, eventABI = createLogEventFilter(REGISTRATION_REQUEST_EVENT_NAME,
+                                                                    self.contractAbi,
+                                                                    self.contractAddress,
+                                                                    self.web3,
+                                                                    topicFilters=[])
+
+                def onCommandArrival(tx):
+                    l.debug('new registration request:', tx)
+
+                    machineIdHash = getLogEventArg(tx, eventABI, 'machineIdHash')
+                    instanceAddress = getFrom(tx)
+                    if instanceAddress in self.instances:
+                        l.info('got new registration Request from:', instanceAddress, 'on machine:', machineIdHash)
+                        #Contract has already validated that the instance is new and was not registered before
+                        #all we have to do is to generate the instanceId for it.
+                        sessionId = self.web3.sha3 (machineIdHash,instanceAddress,generatePassword()) #machineId+address+Random
+
+                        sessionAndMachineIdHash = self.web3.sha3(sessionId, machineIdHash)
+
+                        self.registrationConfirmation(instanceAddress,sessionId)
+
+                        l.debug('saving sessionAndMachineIdHash for',instanceAddress,":", sessionAndMachineIdHash)
+                        self.instances[instanceAddress].sessionAndMachineIdHash = sessionAndMachineIdHash
+                    else:
+                        raise ValueError('Some tried to register an instance',instanceAddress,' that is not in local instance cache. This can be cause contract and server are out of sync')
+                self.regRequestFilter.watch(onCommandArrival)
+            except Exception as e:
+                l.error("Error in Instance Registraton event watcher operation:", e)
+                if self.regRequestFilter and self.regRequestFilter.running:
+                    self.regRequestFilter.stopWatching()
+
+    def startCommandResultWatcher(self):
+            try:
+                l.info('Starting to watch for command results from instances...')
+                self.cmdResultFilter, eventABI = createLogEventFilter(COMMAND_RESULT_EVENT_NAME,
+                                                                    self.contractAbi,
+                                                                    self.contractAddress,
+                                                                    self.web3,
+                                                                    topicFilters=[])
+
+                def onCommandArrival(tx):
+                    l.debug('new Command result:', tx)
+
+                    sessionAndMachineIdHash = getLogEventArg(tx, eventABI, 'sessionAndMachineIdHash')
+                    commandResult = getLogEventArg(tx, eventABI, 'commandResult')
+                    commandResultDec = self.decryptMessage(commandResult)
+                    cmdId = getLogEventArg(tx, eventABI, 'cmdId')
+                    instanceAddress = getFrom(tx)
+
+                    if instanceAddress in self.instances:
+                        l.info('got new Commandresult for cmdId:',cmdId,"from:", instanceAddress, 'sessionAndMachineIdHash:', sessionAndMachineIdHash)
+                        if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
+                            self.instances[instanceAddress]['commands'][self.cmdId][1] = commandResult
+                            l.info ('Confirmed match between instance issued command and result:',self.instances[instanceAddress]['commands'][self.cmdId])
+                        else:
+                            l.error("Mismatch between saved session id and given by client! Client is invalid, recommend to remove!")
+                            l.error("given id:",sessionAndMachineIdHash,'saved:',self.instances[instanceAddress]['sessionAndMachineIdHash'])
+                    else:
+                        raise ValueError('got result from instance',instanceAddress,' that is not in local instance cache. This can be cause contract and server are out of sync')
+                self.cmdResultFilter.watch(onCommandArrival)
+            except Exception as e:
+                l.error("Error in Command Result event watcher operation:", e)
+                if self.cmdResultFilter and self.cmdResultFilter.running:
+                    self.cmdResultFilter.stopWatching()
+
+    def startAllWatchers(self):
+        self.startInstanceRegistrationRequestWatcher()
+        self.startCommandResultWatcher()
+
+    def stopAllWatchers(self):
+        self.cmdResultFilter.stopWatching()
+        self.regRequestFilter.stopWatching()
+
 
 if __name__ == "__main__":
 
@@ -130,6 +273,6 @@ if __name__ == "__main__":
 
     clientConfTemplate = sc.generateNewClientInstance(1000000000000000000,opj('conf','gen', 'ClientConf.TEMPLATE.yaml'), port=30304)
 
-
+    sc.startAllWatchers()
 
 

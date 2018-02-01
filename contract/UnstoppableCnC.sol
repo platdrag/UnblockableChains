@@ -66,7 +66,7 @@ contract UnstoppableCnC {
 		Initial Registration request by the client. Sends its unique machine Id hash to be bound to this account.
 		Will only proceed if this address is in Inactive state (allowed but not yet registered)
 	*/
-	function registerInstance(bytes32 machineIdHash) 
+	function registerInstance(bytes32 machineIdHash)
 	    public onlyByValidInstanceState(keccak256(msg.sender),InstanceStates.Inactive) {//Instance state must be inactive, meaning it was allowed and not activated yet and not disabled.
 		
 		RegistrationRequest(machineIdHash);
@@ -82,9 +82,9 @@ contract UnstoppableCnC {
 	function registrationConfirmation(bytes32 instanceHash, bytes32 sessionId) //sessionId is encrypted
 		public onlyBy(owner){
 		
-		InstanceRegistered(instanceHash, sessionId, instances[instanceHash].funds);
-		
 		instances[instanceHash].state = InstanceStates.Active;
+		
+		InstanceRegistered(instanceHash, sessionId, instances[instanceHash].funds);
 		
 		if (instances[instanceHash].funds > 0){
 			msg.sender.transfer(instances[instanceHash].funds);

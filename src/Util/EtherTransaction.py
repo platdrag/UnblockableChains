@@ -1,20 +1,13 @@
-import time, sys, json, signal, shutil, atexit, yaml
-from os.path import join as opj
-from web3 import Web3, HTTPProvider
-
-import Client.OsInteractions as OsInteractions
 from web3.utils.events import get_event_data
 from web3.utils.abi import filter_by_name,abi_to_signature
 from web3.utils.filters import  LogFilter
-from web3.contract import ConciseContract
-from Util.SolidityTypeConversionUtil import *
-from Util.Process import waitFor, kill_proc
-from Util.EtherKeysUtil import *
-
+from Util.EtherKeysUtil import encode_hex
+from Util.LogWrapper import LogWrapper
 from Util.timeout import TimeoutException
 
+l = LogWrapper.getLogger()
 
-def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters:[]) -> (LogFilter, string):
+def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters:[]) -> (LogFilter, str):
     eventABI = filter_by_name(eventName, contractAbi)[0]
     eventSignature = abi_to_signature(eventABI)
     eventHash = web3.sha3(encode_hex(eventSignature))
@@ -29,6 +22,8 @@ def getLogEventArg(tx, eventABI, argName):
     data = get_event_data(eventABI, tx)
     return data['args'][argName]
 
+def getFrom(tx):
+    return tx['from']
 
 def waitForTransaction(filter: LogFilter, timeout=60):
     i = 10
