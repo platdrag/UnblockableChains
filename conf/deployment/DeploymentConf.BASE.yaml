@@ -13,6 +13,8 @@ keyGenScript: 'bin\genpriv.sh'
 contractUri : 'contract\UnstoppableCnC.sol'
 contractName : 'UnstoppableCnC'
 
+instancesDbFile: 'conf\server\instancesDbFile.yaml'
+
 ownerWalletPassword : '123456' #If empty will be prompted for password each time.
 ownerWallet: #If empty a new account will be generated and written to AUTO conf file. Delete AUTO to regenerate
 
@@ -25,8 +27,8 @@ genesisFile: 'build\genesis.json'
 genesis:
   alloc: {}
   coinbase: ''
-  config: {chainId: 15, eip155Block: 0, eip158Block: 0, homesteadBlock: 0}
-  difficulty: '0x4000'
+  config: {chainId: 666, eip155Block: 0, eip158Block: 0, homesteadBlock: 0}
+  difficulty: '0x400'
   extraData: '0x0000000000000000000000000000000000000000000000000000000000000000'
   gasLimit: '0x8000000'
   mixhash: '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -44,6 +46,6 @@ gethCmd: [*gethbin,
   '--ipcpath', '%DATADIR%\geth.ipc',
   '--etherbase', '%OWNERADDRESS%', '--nodiscover',
 #  '--lightserv','25',
-  '--mine', '--minerthreads', '2', '--verbosity', '4' ]
+  '--mine', '--minerthreads', '4', '--verbosity', '4' ]
 
 

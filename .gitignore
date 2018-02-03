@@ -4,3 +4,5 @@ logs/*
 conf/gen/*
 *.pyc
 generated/*
+/conf/deployment/DeploymentConf.GEN.Wallet.yaml
+/conf/server/instancesDbFile.yaml

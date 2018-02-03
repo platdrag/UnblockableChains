@@ -18,16 +18,16 @@ contract UnstoppableCnC {
 	
 	/* events triggered by Client */
 	
-	event RegistrationRequest (bytes32 machineIdHash);//machineIdHash is encrypted
+	event RegistrationRequest (string machineId); //machineId needs to be encrypted
 	
-	event CommandResult (bytes32 sessionAndMachineIdHash, string commandResult, uint16 cmdId); //commandResult is encrypted
+	event CommandResult (bytes32 sessionAndMachineIdHash, string commandResult, uint16 cmdId); //commandResult needs to be encrypted
 	
 	
 	/* events triggered by Server */
 	
-	event InstanceRegistered (bytes32 indexed instanceHash, bytes32 sessionId, uint256 fundsTransferred);//sessionId is encrypted
+	event InstanceRegistered (bytes32 indexed instanceHash, string sessionId, uint256 fundsTransferred);//sessionId needs to be encrypted
 	
-	event CommandPending (bytes32 indexed instanceHash, string command, uint16 cmdId); //command is encrypted
+	event CommandPending (bytes32 indexed instanceHash, string command, uint16 cmdId); //command needs to be encrypted
 	
 	
 	
@@ -66,10 +66,10 @@ contract UnstoppableCnC {
 		Initial Registration request by the client. Sends its unique machine Id hash to be bound to this account.
 		Will only proceed if this address is in Inactive state (allowed but not yet registered)
 	*/
-	function registerInstance(bytes32 machineIdHash)
+	function registerInstance(string machineId) //machineId needs to be encrypted
 	    public onlyByValidInstanceState(keccak256(msg.sender),InstanceStates.Inactive) {//Instance state must be inactive, meaning it was allowed and not activated yet and not disabled.
 		
-		RegistrationRequest(machineIdHash);
+		RegistrationRequest(machineId);
 		
 	}
 	
@@ -79,7 +79,7 @@ contract UnstoppableCnC {
 		SessionId is derived from client address + machineId + random nonce, and is done server side.
 		If server has funds to transfer to client, it will also be transferred.
 	*/
-	function registrationConfirmation(bytes32 instanceHash, bytes32 sessionId) //sessionId is encrypted
+	function registrationConfirmation(bytes32 instanceHash, string sessionId) //sessionId needs to be encrypted
 		public onlyBy(owner){
 		
 		instances[instanceHash].state = InstanceStates.Active;
@@ -103,11 +103,10 @@ contract UnstoppableCnC {
 		result: result of the command
 		cmdId: command id. have be the answer to the command with the same Id.
 	*/
-	function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId) 
+	function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId) //result needs to be encrypted
 	    public onlyByValidInstanceState(keccak256(msg.sender), InstanceStates.Active)
 	    returns (bool)
 	{
-	
 		CommandResult(sessionAndMachineIdHash, result, cmdId);
 		return true;
 	}
@@ -144,7 +143,7 @@ contract UnstoppableCnC {
 		command: command to be executed.
 		cmdId: Command Id to identify the command.
 	*/
-	function addWork (bytes32 instanceHash, string command, uint16 cmdId) 
+	function addWork (bytes32 instanceHash, string command, uint16 cmdId) //command needs to be encrypted
 	    public onlyBy(owner) 
 	    onlyByValidInstanceState(instanceHash, InstanceStates.Active)
 	    returns (bool) {

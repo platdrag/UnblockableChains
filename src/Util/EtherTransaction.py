@@ -11,7 +11,7 @@ def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters
     eventABI = filter_by_name(eventName, contractAbi)[0]
     eventSignature = abi_to_signature(eventABI)
     eventHash = web3.sha3(encode_hex(eventSignature))
-    l.debug('eventSignature:', eventSignature, 'eventHash:', eventHash)
+    l.debug('creating log filter. eventSignature:', eventSignature, 'eventHash:', eventHash, 'filters:',topicFilters)
 
     commandFilter = web3.eth.filter({'from': fromAddress,
                                                'topics': [eventHash]+topicFilters})
@@ -22,8 +22,8 @@ def getLogEventArg(tx, eventABI, argName):
     data = get_event_data(eventABI, tx)
     return data['args'][argName]
 
-def getFrom(tx):
-    return tx['from']
+def getField(tx,field):
+    return tx[field]
 
 def waitForTransaction(filter: LogFilter, timeout=60):
     i = 10

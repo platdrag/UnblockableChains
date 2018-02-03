@@ -7,8 +7,9 @@ class LogWrapper():
     @classmethod
     def getLogger(cls):
         _logger = logging.getLogger('root')
-        FORMAT = "[%(funcName)7s()] %(message)s"
-        logging.basicConfig(format=FORMAT)
+        FORMAT = "[%(asctime)s %(levelname)5s()] %(message)s"
+        dateFmt = "%y-%m-%d %H:%M:%S"
+        logging.basicConfig(format=FORMAT,datefmt=dateFmt)
         _logger.setLevel(logging.DEBUG)
         return LogWrapper(_logger)
 

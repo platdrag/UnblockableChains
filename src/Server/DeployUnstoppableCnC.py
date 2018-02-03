@@ -137,7 +137,7 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] =  generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
 
 		l.info('Generated new owner wallet. Persisting changes to conf file')
-		with open(opj('conf', 'gen', 'DeploymentConf.AUTO.yaml'),'w') as f:
+		with open(opj('conf', 'deployment', 'DeploymentConf.GEN.Wallet.yaml'),'w') as f:
 			yaml.safe_dump({'ownerWallet':conf['ownerWallet']}, f)
 
 		ownerChanged = True
@@ -154,7 +154,7 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 
 
 def generateClientsTemplates(web3, conf):
-	confBase = yaml.safe_load(open(opj('conf', 'base', 'ClientConf.BASE.yaml')))
+	confBase = yaml.safe_load(open(opj('conf', 'clientGen', 'ClientConf.BASE.yaml')))
 	confBase['contract']['name'] = conf['contractName']
 	confBase['contract']['abi'] = conf['abi']
 	confBase['contract']['address'] = conf['contractDeployedAddress']
@@ -166,7 +166,7 @@ def generateClientsTemplates(web3, conf):
 
 	confBase['enode'] = web3.admin.nodeInfo['enode']
 
-	with open(opj('conf', 'gen', 'ClientConf.TEMPLATE.yaml'), 'w') as f:
+	with open(opj('conf', 'clientGen', 'ClientConf.TEMPLATE.yaml'), 'w') as f:
 		yaml.safe_dump(confBase, f)
 
 def generateServerConf(web3, conf):
@@ -180,13 +180,14 @@ def generateServerConf(web3, conf):
 	serverConf['ownerWalletPassword'] = conf['ownerWalletPassword']
 	serverConf['ownerAddress'] = conf['ownerAddress']
 	serverConf['keyGenScript'] = conf['keyGenScript']
+	serverConf['instancesDbFile'] = conf['instancesDbFile']
 
-	with open(opj('conf', 'gen', 'ServerConf.yaml'), 'w') as f:
+	with open(opj('conf', 'server', 'ServerConf.yaml'), 'w') as f:
 		yaml.safe_dump(serverConf, f)
 
 def loadConf():
-	confBase = yaml.safe_load(open(opj('conf', 'base', 'DeploymentConf.BASE.yaml')))
-	cafile = opj('conf', 'gen', 'DeploymentConf.AUTO.yaml')
+	confBase = yaml.safe_load(open(opj('conf', 'deployment', 'DeploymentConf.BASE.yaml')))
+	cafile = opj('conf', 'deployment', 'DeploymentConf.GEN.Wallet.yaml')
 	confAuto = yaml.safe_load(open(cafile)) if exists(cafile) else None
 	conf = {**confBase, **(confAuto if confAuto else {})}
 	return conf

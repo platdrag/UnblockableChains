@@ -26,5 +26,6 @@ gethCmd: [*gethBin,
   '--datadir', '%DATADIR%',
   '--networkid', '1234',
   '--port', '%NODEPORT%',
-  '--ipcpath', '%DATADIR%\geth.ipc', '--nodiscover',
+  #'--ipcpath', '%DATADIR%\geth.ipc',
+  '--ipcdisable', '--nodiscover',
   '--verbosity', '4' ]
