@@ -37,6 +37,8 @@ class ServerCommands:
         l.info("contract owner wallet address:",self.ownerAddress)
         unlockAccount(self.ownerAddress, self.ownerPassword, self.web3)
 
+        self.gasLimit_tx = conf['gasLimit_tx']
+        self.gasLimit_ev = conf['gasLimit_ev']
 
         self.instancesDbFile = conf['instancesDbFile']+'.'+self.contractAddress
         if os.path.exists(self.instancesDbFile):
@@ -166,7 +168,7 @@ class ServerCommands:
         if instanceAddress in self.instances:
             commandEnc = self.encryptMessage(instanceAddress,command)
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': 3000000})
+            txhash = self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("Command",self.cmdId," was sent to",instanceAddress, 'txHash:', txhash)
             self.instances[instanceAddress]['commands'][self.cmdId] = [command, None]
             self.cmdId += 1
@@ -179,7 +181,7 @@ class ServerCommands:
     def removeInstance (self, instanceAddress):
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+            txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("disallowing ",instanceAddress, 'txHash:', txhash)
             return True
         return False
@@ -187,7 +189,7 @@ class ServerCommands:
     def allowInstance (self, instanceAddress):
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+            txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("registration allowed for:",instanceAddress,'hash:',instanceHash.encode('utf-8'),'txHash:',txhash)
             return True
         return False
@@ -197,7 +199,7 @@ class ServerCommands:
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
             sessionId = self.encryptMessage(instanceAddress, sessionId)
-            txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': 3000000})
+            txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("sending successful registration confirmation to",instanceAddress,'txHash:',txhash)
             return True
         return False

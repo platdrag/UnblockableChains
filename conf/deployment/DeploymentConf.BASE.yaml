@@ -18,7 +18,11 @@ instancesDbFile: 'conf\server\instancesDbFile.yaml'
 ownerWalletPassword : '123456' #If empty will be prompted for password each time.
 ownerWallet: #If empty a new account will be generated and written to AUTO conf file. Delete AUTO to regenerate
 
-gaslimit : 3000000
+#
+# gas limits: transaction & event
+#
+gasLimit_ev : 3_000_000
+gasLimit_tx : 3_000_000
 
 allowedAddresses:
   []

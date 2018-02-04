@@ -30,7 +30,7 @@ def deployContract (web3, conf):
     # Instantiate and deploy contract
     contract = web3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
 
-    tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], 'gas':conf['gaslimit'] },
+    tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], 'gas':conf['gasLimit_tx'] },
         args=(conf['ownerPublic'], conf['allowedAddresses']))
     l.debug('transaction deploy contract, tx_hash:',tx_hash)
 
@@ -185,6 +185,8 @@ def generateServerConf(web3, conf):
     serverConf['ownerAddress'] = conf['ownerAddress']
     serverConf['keyGenScript'] = conf['keyGenScript']
     serverConf['instancesDbFile'] = conf['instancesDbFile']
+    serverConf['gasLimit_tx'] = conf['gasLimit_tx']
+    serverConf['gasLimit_ev'] = conf['gasLimit_ev']
 
     with open(opj('conf', 'server', 'ServerConf.yaml'), 'w') as f:
         yaml.safe_dump(serverConf, f)
