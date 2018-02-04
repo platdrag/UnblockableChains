@@ -37,8 +37,12 @@ def deployContract (web3, conf):
     # Get tx receipt to get contract address
     tx_receipt = None
     while not tx_receipt:
-        tx_receipt = web3.eth.getTransactionReceipt(tx_hash)
+        try:
+            tx_receipt = web3.eth.getTransactionReceipt(tx_hash)
+        except:
+            l.debug('failed obtaining tx receipt with unknown-tx err, retrying')
         time.sleep(1)
+
     contract_address = tx_receipt['contractAddress']
     l.info('contract successfully deployed: ',contract_address, 'gas Used:',tx_receipt['gasUsed'])
     l.debug(' abi:', contract_interface['abi'])
