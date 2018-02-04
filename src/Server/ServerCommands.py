@@ -132,7 +132,7 @@ class ServerCommands:
         os.makedirs(opj(generatedDir, 'logs'), exist_ok=True)
 
         l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet")
-        sc.web3.eth.sendTransaction({'from': sc.ownerAddress, 'to': address,
+        self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': address,
                                      'value': fundValue, 'gas': 21000})
         self.instances[address] = {}
         self.instances[address]['public'] = public
