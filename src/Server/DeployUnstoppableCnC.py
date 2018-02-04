@@ -187,6 +187,7 @@ def generateServerConf(web3, conf):
     serverConf['instancesDbFile'] = conf['instancesDbFile']
     serverConf['gasLimit_tx'] = conf['gasLimit_tx']
     serverConf['gasLimit_ev'] = conf['gasLimit_ev']
+    serverConf['clientInitWeiTransferAmount'] = conf['clientInitWeiTransferAmount']
 
     with open(opj('conf', 'server', 'ServerConf.yaml'), 'w') as f:
         yaml.safe_dump(serverConf, f)

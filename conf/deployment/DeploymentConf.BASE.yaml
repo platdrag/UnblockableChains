@@ -24,6 +24,11 @@ ownerWallet: #If empty a new account will be generated and written to AUTO conf 
 gasLimit_ev : 3_000_000
 gasLimit_tx : 3_000_000
 
+#
+# client init
+#
+clientInitWeiTransferAmount: 1_000_000_000_000_000_000
+
 allowedAddresses:
   []
 
