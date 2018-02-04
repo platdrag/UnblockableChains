@@ -12,7 +12,6 @@ from Util.EtherTransaction import *
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
-from geth import DevGethProcess
 
 
 l = LogWrapper.getLogger()
