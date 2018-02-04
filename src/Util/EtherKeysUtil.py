@@ -7,41 +7,41 @@ from Util.LogWrapper import LogWrapper
 l = LogWrapper.getLogger()
 
 def generateKeyPair (keyGenScript) -> (str,str):
-	'''
-	Use openssl to generate a secp256k1 key pair to be used in ethereum.
-	Windows users uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
-	Under linux script runs natively.
-	:param scriptFile: config with keyGenScript correctly set.
-	:return: public, private as hex string format
-	'''
+    '''
+    Use openssl to generate a secp256k1 key pair to be used in ethereum.
+    Windows users uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
+    Under linux script runs natively.
+    :param scriptFile: config with keyGenScript correctly set.
+    :return: public, private as hex string format
+    '''
 
-	path = os.path.abspath(keyGenScript)
-	if os.name == 'nt':
-		path = Win2LinuxPathConversion(path)
-		l.debug("NT: running bash keyGenScript script at ",path)
-		proc = runCommand(['bash', path])
-	else:
-		l.debug("POSIX: running native keyGenScript script at " , path)
-		proc = runCommand([path])
+    path = os.path.abspath(keyGenScript)
+    if os.name == 'nt':
+        path = Win2LinuxPathConversion(path)
+        l.debug("NT: running bash keyGenScript script at ",path)
+        proc = runCommand(['bash', path])
+    else:
+        l.debug("POSIX: running native keyGenScript script at " , path)
+        proc = runCommand([path])
 
-	stdoutdata, stderrdata = proc.communicate()
+    stdoutdata, stderrdata = proc.communicate()
 
-	if proc.returncode:
-		raise ValueError(format_error_message(
-			"Error trying to create a new account",
-			path,
-			proc.returncode,
-			stdoutdata,
-			stderrdata,
-		))
-	stdoutdata = ast.literal_eval(stdoutdata.decode('utf-8'))
-	return stdoutdata['pub'],stdoutdata['priv']
+    if proc.returncode:
+        raise ValueError(format_error_message(
+            "Error trying to create a new account",
+            path,
+            proc.returncode,
+            stdoutdata,
+            stderrdata,
+        ))
+    stdoutdata = ast.literal_eval(stdoutdata.decode('utf-8'))
+    return stdoutdata['pub'],stdoutdata['priv']
 
 def generatePassword(size=12, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
-	return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
+    return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
 def getOwnerPassword (password = None, msg = 'Enter password to unlock owner wallet'):
-	return getpass.getpass(msg) if not password else password
+    return getpass.getpass(msg) if not password else password
 
 
 def generateWallet(keyGenScript, password = None):
@@ -55,26 +55,26 @@ def generateWallet(keyGenScript, password = None):
     return walletJson, public, private, address
 
 def loadWallet(walletJson, password = None):
-	password = getOwnerPassword(password)
-	private = decode_keystore_json(ast.literal_eval(walletJson), password)
+    password = getOwnerPassword(password)
+    private = decode_keystore_json(ast.literal_eval(walletJson), password)
 
-	public = '0x' + encode_hex(privtopub(private))
-	address = '0x' + encode_hex(privtoaddr(private))
-	private = '0x' + bytes.decode(private, 'utf-8')
+    public = '0x' + encode_hex(privtopub(private))
+    address = '0x' + encode_hex(privtoaddr(private))
+    private = '0x' + bytes.decode(private, 'utf-8')
 
-	return public, private, address
+    return public, private, address
 
 def unlockAccount(address, password, web3, duration = 0):
-	password = getOwnerPassword(password)
-	unlocked = web3.personal.unlockAccount(address, password, duration)
-	if not unlocked:
-		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
-	l.info('Successfully unlocked wallet',address)
+    password = getOwnerPassword(password)
+    unlocked = web3.personal.unlockAccount(address, password, duration)
+    if not unlocked:
+        raise ValueError('Unable to unlock wallet',address,'. wrong password?')
+    l.info('Successfully unlocked wallet',address)
 
 def importAccountToNode(web3, currentAddress, private, password):
-	if not currentAddress in web3.personal.listAccounts:
-		address = web3.personal.importRawKey(private, getOwnerPassword (password))
-		assert(address == currentAddress)
-		l.info('Account', currentAddress, 'imported to local node')
-	l.info('Account Balance: ',str(web3.fromWei(web3.eth.getBalance(currentAddress), "ether")))
-	unlockAccount(currentAddress,password, web3)
+    if not currentAddress in web3.personal.listAccounts:
+        address = web3.personal.importRawKey(private, getOwnerPassword (password))
+        assert(address == currentAddress)
+        l.info('Account', currentAddress, 'imported to local node')
+    l.info('Account Balance: ',str(web3.fromWei(web3.eth.getBalance(currentAddress), "ether")))
+    unlockAccount(currentAddress,password, web3)
