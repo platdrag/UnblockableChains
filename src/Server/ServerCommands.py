@@ -214,7 +214,7 @@ class ServerCommands:
                                                                     topicFilters=[])
 
                 def onCommandArrival(tx):
-                    l.debug('new registration request:', tx)
+                    l.debug('new registration request, tx:', tx)
 
                     machineId = getLogEventArg(tx, eventABI, 'machineId')
                     machineId = self.decryptMessage(machineId)
