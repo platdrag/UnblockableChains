@@ -40,6 +40,8 @@ class ServerCommands:
         self.gasLimit_tx = conf['gasLimit_tx']
         self.gasLimit_ev = conf['gasLimit_ev']
 
+        self.clientInitWeiTransferAmount = conf['clientInitWeiTransferAmount']
+
         self.instancesDbFile = conf['instancesDbFile']+'.'+self.contractAddress
         if os.path.exists(self.instancesDbFile):
             with open (self.instancesDbFile) as f:
@@ -71,7 +73,6 @@ class ServerCommands:
 
     '''
         
-        :param fundValue: amount in wei to transfer to the client 
         :param clientConfTemplateFile: 
         :param clientId: 
         :param rpcPort: 
@@ -79,7 +80,11 @@ class ServerCommands:
         :param walletPassword: 
         :return: 
     '''
-    def generateNewClientInstance (self, fundValue, clientConfTemplateFile, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
+    def generateNewClientInstance (self, clientConfTemplateFile, fundValue=None, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
+
+        if not fundValue:
+            fundValue = self.clientInitWeiTransferAmount
+
         with open(clientConfTemplateFile) as f:
             clientConfTemplate = yaml.safe_load(f)
 
@@ -298,7 +303,7 @@ if __name__ == "__main__":
 
     sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
 
-    # clientConfTemplate = sc.generateNewClientInstance(1000000000000000000,opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)
+    # clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)
 
     sc.startAllWatchers()
 
