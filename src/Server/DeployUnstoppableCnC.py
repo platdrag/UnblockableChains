@@ -231,3 +231,4 @@ if __name__ == "__main__":
     generateClientsTemplates (web3,conf)
 
     generateServerConf(web3, conf)
+
