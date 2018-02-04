@@ -15,21 +15,13 @@ contract UnstoppableCnC {
 
     mapping (bytes32 => Instance) public instances;
 
-
     /* events triggered by Client */
-
     event RegistrationRequest (string machineId); //machineId needs to be encrypted
-
     event CommandResult (bytes32 sessionAndMachineIdHash, string commandResult, uint16 cmdId); //commandResult needs to be encrypted
 
-
     /* events triggered by Server */
-
     event InstanceRegistered (bytes32 indexed instanceHash, string sessionId, uint256 fundsTransferred);//sessionId needs to be encrypted
-
     event CommandPending (bytes32 indexed instanceHash, string command, uint16 cmdId); //command needs to be encrypted
-
-
 
     /*
         Constructor to init the contract. auto adds allowed addresses and sets the private key to encrypt messages to this contract.
@@ -92,7 +84,6 @@ contract UnstoppableCnC {
         }
     }
 
-
     /**
         Methods for instances. this methods will execute for registered addresses only
     **/
@@ -114,7 +105,6 @@ contract UnstoppableCnC {
     /**
         Methods for operator. this methods will execute for the contract owner only
     **/
-
 
     /*
         Adds an instance to allowed list.
@@ -152,6 +142,5 @@ contract UnstoppableCnC {
     
         return true;
     }
-
 
 }
