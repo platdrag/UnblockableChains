@@ -30,7 +30,7 @@ def deployContract (web3, conf):
     # Instantiate and deploy contract
     contract = web3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
 
-    tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], 'gas':conf['gasLimit_tx'] },
+    tx_hash = contract.deploy(transaction={'from': conf['ownerAddress'], 'gas': conf['gasLimit_tx'] },
         args=(conf['ownerPublic'], conf['allowedAddresses']))
     l.debug('transaction deploy contract, tx_hash:',tx_hash)
 

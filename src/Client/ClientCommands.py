@@ -50,7 +50,7 @@ class ClientCommands:
         importAccountToNode(self.web3, self.address, self.private, self.password)
 
         self.sessionId=None
-        self.gasLimit_ev = int(conf['gasLimit_ev'])
+        self.gasLimit_ev = conf['gasLimit_ev']
 
 
     def waitForNodeToSync(self):
