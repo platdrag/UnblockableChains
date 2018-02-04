@@ -92,7 +92,7 @@ def runGethNode(conf, freshStart = False):
             shutil.rmtree(conf['BlockChainData'],ignore_errors=True)
 
             l.debug('Generating genesis file. Preallocating some coins to owner ',conf['ownerAddress'],' balance')
-            conf['genesis']['alloc'][conf['ownerAddress']] = { "balance": "300000000000000000" }
+            conf['genesis']['alloc'][conf['ownerAddress']] = { "balance": str(3*10**20) }
             conf['genesis']['coinbase'] = conf['ownerAddress']
 
             with open(conf['genesisFile'],'w') as f:
