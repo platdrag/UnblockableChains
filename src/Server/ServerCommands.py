@@ -150,6 +150,7 @@ class ServerCommands:
     def decryptMessage(self, msg, decrypt=True):
         if decrypt:
             pass
+            #TODO compelete
         # 	alice = pyelliptic.ecc()
         # 	msg = alice.encrypt(msg,self.ownerPubKey)
         return msg
@@ -157,6 +158,7 @@ class ServerCommands:
     def encryptMessage(self, instanceAddress, msg, encrypt=True):
         public = self.instances[instanceAddress]['public']
         if encrypt:
+            # TODO compelete
             pass
         # 	bob = pyelliptic.ecc()
         # 	bob.decrypt()

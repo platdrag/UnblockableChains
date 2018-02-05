@@ -6,3 +6,4 @@ conf/gen/*
 generated/*
 /conf/deployment/DeploymentConf.GEN.Wallet.yaml
 /conf/server/*
+/conf/clientGen/ClientConf.TEMPLATE.yaml
