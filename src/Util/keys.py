@@ -1,3 +1,6 @@
+"""
+ pyethereum key utils - see https://github.com/ethereum/pyethereum/blob/develop/ethereum/tools/keys.py
+"""
 import os
 import sys
 import pbkdf2
