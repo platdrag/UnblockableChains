@@ -99,7 +99,8 @@ def runGethNode(conf, freshStart = False):
 				json.dump(conf['genesis'],f, indent=1)
 
 			l.info('Initializing blockchain...')
-			cmd = [conf['geth'],'--datadir',conf['BlockChainData'],'init',conf['genesisFile'] ]
+			gethExe = conf['geth']+('.exe' if os.name == 'nt' else '')
+			cmd = [gethExe,'--datadir',conf['BlockChainData'],'init',conf['genesisFile'] ]
 
 			l.debug('Running geth init: ' , ' '.join(cmd))
 			with open(opj('logs', 'geth.server.log'), 'a') as f:
@@ -187,7 +188,7 @@ def generateServerConf(web3, conf):
 	serverConf['instancesDbFile'] = conf['instancesDbFile']
 	serverConf['gasLimit_tx'] = conf['gasLimit_tx']
 	serverConf['gasLimit_ev'] = conf['gasLimit_ev']
-	serverConf['clientInitWeiTransferAmount'] = conf['clientInitWeiTransferAmount']
+	serverConf['defaultAmountTransferToClientWei'] = conf['defaultAmountTransferToClientWei']
 
 	with open(opj('conf', 'server', 'ServerConf.yaml'), 'w') as f:
 		yaml.safe_dump(serverConf, f)
@@ -206,7 +207,8 @@ if __name__ == "__main__":
 
 	conf = loadConf()
 
-	os.environ['SOLC_BINARY'] = opj(os.getcwd(), conf['solc'])
+	solcPath = conf['solc'] + ('.exe' if os.name == 'nt' else '')
+	os.environ['SOLC_BINARY'] = opj(os.getcwd(), solcPath)
 
 	#Loading/Generating new account for the owner of the contract
 	ownerChanged = loadOrGenerateAccount(conf,regenerateOwnerAccount = False)

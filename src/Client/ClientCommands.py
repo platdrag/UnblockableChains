@@ -8,7 +8,6 @@ from Util.SolidityTypeConversionUtil import *
 from Util.Process import waitFor, kill_proc
 from Util.EtherKeysUtil import *
 from Util.EtherTransaction import *
-# import pyelliptic
 import subprocess as sp
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
@@ -201,7 +200,8 @@ class ClientCommands:
 					json.dump(conf['genesis'], f, indent=1)
 
 				l.info('Initializing blockchain...')
-				cmd = [conf['geth'],'--datadir',conf['BlockChainData'],	'init',	conf['genesisFile']]
+				gethExe = conf['geth'] + ('.exe' if os.name == 'nt' else '')
+				cmd = [gethExe,'--datadir',conf['BlockChainData'],	'init',	conf['genesisFile']]
 
 				l.debug('Running geth init: ' , ' '.join(cmd))
 				with open(opj('logs', 'geth.client.log'), 'a') as f:

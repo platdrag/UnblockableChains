@@ -1,11 +1,10 @@
 opMode: 'test'
 nodeRpcUrl : 'http://localhost:8546'
 
-solc: 'bin\solc.exe'
+solc: 'bin\solc'
 
-geth: &gethbin 'bin\geth.exe'
+geth: &gethbin 'bin\geth'
 BlockChainData: 'build\Server'
-
 
 keyGenScript: 'bin\genpriv.sh'
 
@@ -27,10 +26,9 @@ gasLimit_tx : 3_000_000
 #
 # client init
 #
-clientInitWeiTransferAmount: 1_000_000_000_000_000_000
+defaultAmountTransferToClientWei: 1_000_000_000_000_000_000
 
-allowedAddresses:
-  []
+allowedAddresses: []
 
 genesisFile: 'build\genesis.json'
 genesis:

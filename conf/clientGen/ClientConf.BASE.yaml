@@ -6,7 +6,7 @@ contract:
   abi: #get from deployContract
   address: #get from deployContract
 
-geth: &gethBin 'bin\geth.exe' #Static
+geth: &gethBin 'bin\geth' #Static
 BlockChainData: 'build\Client%CLIENT_ID%' #Add Client #
 
 clientWalletPassword : #To be generated in generateNewClient
