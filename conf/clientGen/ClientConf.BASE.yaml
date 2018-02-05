@@ -15,6 +15,11 @@ clientWallet:  #To be generated in generateNewClient
 genesisFile: 'build\genesisClient.json' #
 genesis: # copy from server genesis (remove addresses) on
 
+#
+# gas limits: event
+#
+gasLimit_ev: 3_000_000
+
 opMode: 'test'
 enode: #server enode
 

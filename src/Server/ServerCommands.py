@@ -37,6 +37,10 @@ class ServerCommands:
         l.info("contract owner wallet address:",self.ownerAddress)
         unlockAccount(self.ownerAddress, self.ownerPassword, self.web3)
 
+		self.gasLimit_tx = conf['gasLimit_tx']
+		self.gasLimit_ev = conf['gasLimit_ev']
+
+		self.clientInitWeiTransferAmount = conf['clientInitWeiTransferAmount']
 
         self.instancesDbFile = conf['instancesDbFile']+'.'+self.contractAddress
         if os.path.exists(self.instancesDbFile):
@@ -69,7 +73,6 @@ class ServerCommands:
 
     '''
         
-        :param fundValue: amount in wei to transfer to the client 
         :param clientConfTemplateFile: 
         :param clientId: 
         :param rpcPort: 
@@ -77,7 +80,11 @@ class ServerCommands:
         :param walletPassword: 
         :return: 
     '''
-    def generateNewClientInstance (self, fundValue, clientConfTemplateFile, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
+	def generateNewClientInstance (self, clientConfTemplateFile, fundValue=None, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
+
+		if not fundValue:
+			fundValue = self.clientInitWeiTransferAmount
+
         with open(clientConfTemplateFile) as f:
             clientConfTemplate = yaml.safe_load(f)
 
@@ -132,7 +139,7 @@ class ServerCommands:
         os.makedirs(opj(generatedDir, 'logs'), exist_ok=True)
 
         l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet")
-        sc.web3.eth.sendTransaction({'from': sc.ownerAddress, 'to': address,
+		self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': address,
                                      'value': fundValue, 'gas': 21000})
         self.instances[address] = {}
         self.instances[address]['public'] = public
@@ -168,7 +175,7 @@ class ServerCommands:
         if instanceAddress in self.instances:
             commandEnc = self.encryptMessage(instanceAddress,command)
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': 3000000})
+			txhash = self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("Command",self.cmdId," was sent to",instanceAddress, 'txHash:', txhash)
             self.instances[instanceAddress]['commands'][self.cmdId] = [command, None]
             self.cmdId += 1
@@ -181,7 +188,7 @@ class ServerCommands:
     def removeInstance (self, instanceAddress):
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+			txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("disallowing ",instanceAddress, 'txHash:', txhash)
             return True
         return False
@@ -189,7 +196,7 @@ class ServerCommands:
     def allowInstance (self, instanceAddress):
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
-            txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': 3000000})
+			txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("registration allowed for:",instanceAddress,'hash:',instanceHash.encode('utf-8'),'txHash:',txhash)
             return True
         return False
@@ -199,7 +206,7 @@ class ServerCommands:
         if instanceAddress in self.instances:
             instanceHash = toBytes32Hash(instanceAddress)
             sessionId = self.encryptMessage(instanceAddress, sessionId)
-            txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': 3000000})
+			txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
             l.info("sending successful registration confirmation to",instanceAddress,'txHash:',txhash)
             return True
         return False
@@ -216,7 +223,7 @@ class ServerCommands:
                                                                     topicFilters=[])
 
                 def onCommandArrival(tx):
-                    l.debug('new registration request:', tx)
+					l.debug('new registration request, tx:', tx)
 
                     machineId = getLogEventArg(tx, eventABI, 'machineId')
                     machineId = self.decryptMessage(machineId)
@@ -298,7 +305,7 @@ if __name__ == "__main__":
 
     sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
 
-    # clientConfTemplate = sc.generateNewClientInstance(1000000000000000000,opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)
+	# clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)
 
     sc.startAllWatchers()
 

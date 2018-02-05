@@ -46,13 +46,13 @@ def getOwnerPassword (password = None, msg = 'Enter password to unlock owner wal
 
 def generateWallet(keyGenScript, password = None):
 
-    public, private = generateKeyPair(keyGenScript)
-    password = getOwnerPassword(password, "Choose account password. Please remember it as it won't be written anywhere!")
+	public, private = generateKeyPair(keyGenScript)
+	password = getOwnerPassword(password, "Choose account password. Please remember it as it won't be written anywhere!")
 
-    walletJson = str(make_keystore_json(private[2:].encode('utf-8'), password))
-    address =  '0x' + encode_hex(pubtoaddr(public[2:].encode('utf-8')))
+	walletJson = str(make_keystore_json(private[2:].encode('utf-8'), password))
+	address =  '0x' + encode_hex(pubtoaddr(public[2:].encode('utf-8')))
 
-    return walletJson, public, private, address
+	return walletJson, public, private, address
 
 def loadWallet(walletJson, password = None):
 	password = getOwnerPassword(password)
