@@ -20,7 +20,8 @@ class ClientCommands:
 
 	def __init__(self, confFile):
 		conf = yaml.safe_load(open(confFile))
-
+		self.opMode = conf['opMode']
+		l.info('Working in',self.opMode,'mode')
 		self.contractAddress = conf['contract']['address']
 		self.contractAbi = conf['contract']['abi']
 
@@ -29,7 +30,7 @@ class ClientCommands:
 		# connect to local node
 		self.web3 = Web3(HTTPProvider(conf['nodeRpcUrl']))
 
-		self.web3.admin.addPeer(conf['enode'])
+		self.web3.admin.addPeer(conf[self.opMode]['enode'])
 		peers = waitFor (lambda : self.web3.admin.peers, emptyResponse=[],pollInterval=0.1, maxRetries=10)
 		assert (len(peers) > 0)
 		l.info('connected peers:',self.web3.admin.peers)
@@ -190,30 +191,26 @@ class ClientCommands:
 
 		# genesis = ast.literal_eval(conf['genesis'])
 
-		if conf['opMode'] == 'test':
-			if not os.path.exists(conf['genesisFile']):
+		if conf['opMode'] == 'privateNet':
+			if not os.path.exists(conf[self.opMode]['genesisFile']):
 				l.warning('Fresh start! removing blockchain dir ',conf['BlockChainData'])
 
 				shutil.rmtree(conf['BlockChainData'],ignore_errors=True)
 
-				with open(conf['genesisFile'], 'w') as f:
-					json.dump(conf['genesis'], f, indent=1)
+				with open(conf[self.opMode]['genesisFile'], 'w') as f:
+					json.dump(conf[self.opMode]['genesis'], f, indent=1)
 
 				l.info('Initializing blockchain...')
 				gethExe = conf['geth'] + ('.exe' if os.name == 'nt' else '')
-				cmd = [gethExe,'--datadir',conf['BlockChainData'],	'init',	conf['genesisFile']]
+				cmd = [gethExe,'--datadir',conf['BlockChainData'],	'init',	conf[self.opMode]['genesisFile']]
 
 				l.debug('Running geth init: ' , ' '.join(cmd))
 				with open(opj('logs', 'geth.client.log'), 'a') as f:
 					proc = runCommand(cmd, stdout=f)
 					proc.communicate()
-		elif conf['opMode'] == 'TestNet':
-			pass
-		elif conf['opMode'] == 'RealNet':
-			pass
 
 		l.info('Running geth node...')
-		cmd = conf['gethCmd']
+		cmd = conf[self.opMode]['gethCmd']
 		l.debug('Running light geth : ' , ' '.join(cmd))
 
 		proc = runCommand(cmd, stderr=open(opj('logs', 'geth.client.log'), 'a'))

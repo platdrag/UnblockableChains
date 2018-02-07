@@ -40,14 +40,14 @@ def generateKeyPair (keyGenScript) -> (str,str):
 def generatePassword(size=12, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
 	return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
-def getOwnerPassword (password = None, msg = 'Enter password to unlock owner wallet'):
+def passwordPrompt (password = None, msg ='Enter password to unlock owner wallet'):
 	return getpass.getpass(msg) if not password else password
 
 
 def generateWallet(keyGenScript, password = None):
 
 	public, private = generateKeyPair(keyGenScript)
-	password = getOwnerPassword(password, "Choose account password. Please remember it as it won't be written anywhere!")
+	password = passwordPrompt(password, "Choose account password. Please remember it as it won't be written anywhere!")
 
 	walletJson = str(make_keystore_json(private[2:].encode('utf-8'), password))
 	address =  '0x' + encode_hex(pubtoaddr(public[2:].encode('utf-8')))
@@ -55,7 +55,7 @@ def generateWallet(keyGenScript, password = None):
 	return walletJson, public, private, address
 
 def loadWallet(walletJson, password = None):
-	password = getOwnerPassword(password)
+	password = passwordPrompt(password)
 	private = decode_keystore_json(ast.literal_eval(walletJson), password)
 
 	public = '0x' + encode_hex(privtopub(private))
@@ -65,15 +65,17 @@ def loadWallet(walletJson, password = None):
 	return public, private, address
 
 def unlockAccount(address, password, web3, duration = 0):
-	password = getOwnerPassword(password)
+	password = passwordPrompt(password)
 	unlocked = web3.personal.unlockAccount(address, password, duration)
 	if not unlocked:
 		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
 	l.info('Successfully unlocked wallet',address)
 
 def importAccountToNode(web3, currentAddress, private, password):
+	if not password:
+		password = passwordPrompt ()
 	if not currentAddress in web3.personal.listAccounts:
-		address = web3.personal.importRawKey(private, getOwnerPassword (password))
+		address = web3.personal.importRawKey(private, password)
 		assert(address == currentAddress)
 		l.info('Account', currentAddress, 'imported to local node')
 	l.info('Account Balance: ',str(web3.fromWei(web3.eth.getBalance(currentAddress), "ether")))

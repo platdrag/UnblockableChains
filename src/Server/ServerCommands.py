@@ -40,7 +40,6 @@ class ServerCommands:
 		self.gasLimit_tx = conf['gasLimit_tx']
 		self.gasLimit_ev = conf['gasLimit_ev']
 
-		self.defaultAmountTransferToClientWei = conf['defaultAmountTransferToClientWei']
 		self.instancesDbFile = conf['instancesDbFile']+'.'+self.contractAddress
 		if os.path.exists(self.instancesDbFile):
 			with open (self.instancesDbFile) as f:
@@ -79,13 +78,9 @@ class ServerCommands:
 		:param walletPassword: 
 		:return: 
 	'''
-	def generateNewClientInstance (self, clientConfTemplateFile, fundValue=None, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
-
-		if not fundValue:
-			fundValue = self.defaultAmountTransferToClientWei
-
-		with open(clientConfTemplateFile) as f:
-			clientConfTemplate = yaml.safe_load(f)
+	def generateNewClientInstance (self, clientConfTemplateFile, fundValue, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
+		
+		
 
 		l.info ("Creating new Client instance")
 		walletPassword = generatePassword(20) if walletPassword == None else walletPassword
@@ -104,15 +99,26 @@ class ServerCommands:
 		l.debug('\tPrivate key:', private)
 
 		#Generate Conf
+		with open(clientConfTemplateFile) as f:
+			clientConfTemplate = yaml.safe_load(f)
+		
+		opMode = clientConfTemplate['opMode']
+		l.info('Client is to be generated for', opMode, 'mode')
+		
 		clientConfTemplate['nodeRpcUrl'] = clientConfTemplate['nodeRpcUrl'].replace('%NODEPORT%', str(rpcPort))
 		clientConfTemplate['BlockChainData'] = clientConfTemplate['BlockChainData'].replace('%CLIENT_ID%', clientId)
-		clientConfTemplate['gethCmd'] = ' '.join(clientConfTemplate['gethCmd']) \
+		clientConfTemplate[opMode]['gethCmd'] = ' '.join(clientConfTemplate[opMode]['gethCmd']) \
 			.replace('%RPCPORT%', str(rpcPort)) \
 			.replace('%NODEPORT%', str(port)) \
 			.replace('%DATADIR%', clientConfTemplate['BlockChainData']) \
 			.split(' ')
 		clientConfTemplate['clientWallet'] = walletJson
 		clientConfTemplate['clientWalletPassword'] = walletPassword
+		
+		if opMode == 'mainNet':
+			clientConfTemplate['privateNet'] = None
+		
+		
 
 		# Package the Code
 		#TODO add all components

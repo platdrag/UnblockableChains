@@ -1,36 +1,48 @@
+opMode: 'privateNet'
+
 nodeRpcUrl : 'http://localhost:%NODEPORT%' #Static
-#interfaceDir : 'interface'
 
 contract:
-  name :  #Static
-  abi: #get from deployContract
-  address: #get from deployContract
+  name :  #AUTO FILLED on client generation
+  abi: #AUTO FILLED on client generation
+  address: #AUTO FILLED on client generation
 
-geth: &gethBin 'bin\geth' #Static
+geth: &gethBin 'bin\geth' #Static. for windows path is filename withot .exe
 BlockChainData: 'build\Client%CLIENT_ID%' #Add Client #
 
 clientWalletPassword : #To be generated in generateNewClient
 clientWallet:  #To be generated in generateNewClient
 
-genesisFile: 'build\genesisClient.json' #
-genesis: # copy from server genesis (remove addresses) on
-
-#
 # gas limits: event
-#
 gasLimit_ev: 3_000_000
 
-opMode: 'test'
-enode: #server enode
+privateNet:
+  genesisFile: 'build\genesisClient.json'
+  # copy from server genesis (remove addresses) on
+  genesis: #To be generated automatically in generateClientsTemplates
 
-#' --syncmode','light',
-gethCmd: [*gethBin,
-  '--rpc','--rpcaddr','127.0.0.1',
-  '--rpcport', '%RPCPORT%',
-  '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
-  '--datadir', '%DATADIR%',
-  '--networkid', '1234',
-  '--port', '%NODEPORT%',
-  #'--ipcpath', '%DATADIR%\geth.ipc',
-  '--ipcdisable', '--nodiscover',
-  '--verbosity', '4' ]
+  #server node enode url
+  enode: #To be generated automatically in generateClientsTemplates
+
+  #' --syncmode','light',
+  gethCmd: [*gethBin,
+    '--rpc','--rpcaddr','127.0.0.1',
+    '--rpcport', '%RPCPORT%',
+    '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
+    '--datadir', '%DATADIR%',
+    '--networkid', '1234',
+    '--port', '%NODEPORT%',
+    '--ipcdisable',
+    '--nodiscover',
+    '--verbosity', '4' ]
+
+mainNet:
+  gethCmd: [*gethBin,
+    '--rpc','--rpcaddr','127.0.0.1',
+    '--syncmode','"light"',
+    '--rpcport', '%RPCPORT%',
+    '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
+    '--datadir', '%DATADIR%',
+    '--port', '%NODEPORT%',
+    '--ipcdisable',
+    '--verbosity', '4' ]

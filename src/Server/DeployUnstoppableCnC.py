@@ -83,35 +83,32 @@ def runGethNode(conf, freshStart = False):
 				except OSError:
 					pass #all good because process wasn't running anymore
 
-	# genesis = conf['genesis']#ast.literal_eval()
-
-	if conf['opMode'] == 'test':
+	opMode = conf['opMode']
+	l.info('Deploying in', opMode, 'mode')
+	if opMode == 'privateNet':
 		if freshStart:
 			l.warning('Fresh start! removing blockchain dir ',conf['BlockChainData'])
 
 			shutil.rmtree(conf['BlockChainData'],ignore_errors=True)
 
 			l.debug('Generating genesis file. Preallocating some coins to owner ',conf['ownerAddress'],' balance')
-			conf['genesis']['alloc'][conf['ownerAddress']] = { "balance": str(3*10**20) }
-			conf['genesis']['coinbase'] = conf['ownerAddress']
+			conf[opMode]['genesis']['alloc'][conf['ownerAddress']] = { "balance": str(3*10**20) }
+			conf[opMode]['genesis']['coinbase'] = conf['ownerAddress']
 
-			with open(conf['genesisFile'],'w') as f:
-				json.dump(conf['genesis'],f, indent=1)
+			with open(conf[opMode]['genesisFile'],'w') as f:
+				json.dump(conf[opMode]['genesis'],f, indent=1)
 
 			l.info('Initializing blockchain...')
 			gethExe = conf['geth']+('.exe' if os.name == 'nt' else '')
-			cmd = [gethExe,'--datadir',conf['BlockChainData'],'init',conf['genesisFile'] ]
+			cmd = [gethExe,'--datadir',conf['BlockChainData'],'init',conf[opMode]['genesisFile'] ]
 
 			l.debug('Running geth init: ' , ' '.join(cmd))
 			with open(opj('logs', 'geth.server.log'), 'a') as f:
 				proc = runCommand(cmd, stdout=f)
 				proc.communicate()
-	elif conf['opMode'] == 'TestNet':
-		pass
-	elif conf['opMode'] == 'RealNet':
-		pass
 
-	cmd = conf['gethCmd']
+
+	cmd = conf[opMode]['gethCmd']
 	cmd = [x.replace('%DATADIR%', conf['BlockChainData']) for x in cmd]
 	cmd = [x.replace('%OWNERADDRESS%', conf['ownerAddress']) for x in cmd]
 	l.info('Running geth node: cmd: ', ' '.join(cmd))
@@ -159,20 +156,19 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 
 
 def generateClientsTemplates(web3, conf):
-	confBase = yaml.safe_load(open(opj('conf', 'clientGen', 'ClientConf.BASE.yaml')))
-	confBase['contract']['name'] = conf['contractName']
-	confBase['contract']['abi'] = conf['abi']
-	confBase['contract']['address'] = conf['contractDeployedAddress']
+	clientConfBase = yaml.safe_load(open(opj('conf', 'clientGen', 'ClientConf.BASE.yaml')))
+	clientConfBase['contract']['name'] = conf['contractName']
+	clientConfBase['contract']['abi'] = conf['abi']
+	clientConfBase['contract']['address'] = conf['contractDeployedAddress']
 
-	if conf['opMode'] == 'test':
-		with open(conf['genesisFile'], 'r') as f:
-			confBase['genesis'] = json.load(f)
-		# confBase['genesis'] = conf['genesis']
+	if conf['opMode'] == 'privateNet':
+		with open(conf['privateNet']['genesisFile'], 'r') as f:
+			clientConfBase['privateNet']['genesis'] = json.load(f)
+		clientConfBase['privateNet']['enode'] = web3.admin.nodeInfo['enode']
 
-	confBase['enode'] = web3.admin.nodeInfo['enode']
 
 	with open(opj('conf', 'clientGen', 'ClientConf.TEMPLATE.yaml'), 'w') as f:
-		yaml.safe_dump(confBase, f)
+		yaml.safe_dump(clientConfBase, f)
 
 def generateServerConf(web3, conf):
 	serverConf = {}
@@ -188,7 +184,6 @@ def generateServerConf(web3, conf):
 	serverConf['instancesDbFile'] = conf['instancesDbFile']
 	serverConf['gasLimit_tx'] = conf['gasLimit_tx']
 	serverConf['gasLimit_ev'] = conf['gasLimit_ev']
-	serverConf['defaultAmountTransferToClientWei'] = conf['defaultAmountTransferToClientWei']
 
 	with open(opj('conf', 'server', 'ServerConf.yaml'), 'w') as f:
 		yaml.safe_dump(serverConf, f)
