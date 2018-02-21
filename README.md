@@ -1,11 +1,17 @@
 # About
 Nothing interesting yet...
 
-# Dependencies - Python
+# Dependencies
 - python3-bitcoin
 - python3-pbkdf2
 - py-solc
 - web3
+
+# Dependencies - web UI
+- python3-flask
+- python3-werkzeug
+- Flask-Sockets
+- gevent-websocket
 
 # Use - linux
 - under `conf/deployment/DeploymentConf.BASE.yaml`, adjust the following values:
