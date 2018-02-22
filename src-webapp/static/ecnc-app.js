@@ -22,6 +22,8 @@ var app = new Vue({
            var time = new Date(msg.date);
            var timeStr = time.toLocaleTimeString();
 
+           new_client_ph_id = '__new-client-placeholder-id__' // new client tmp id hack
+
            switch(msg.msg_type) {
 
              case 's.hello':
@@ -30,8 +32,8 @@ var app = new Vue({
 
              case 's.client-update':
                client = msg.payload;
-               if('xxx-new-client' == client.addr && 'kit-generation-end' == client.status){
-                  Vue.delete(app.c_map, 'xxx-new-client');
+               if(new_client_ph_id == client.addr && 'kit-generation-end' == client.status){
+                  Vue.delete(app.c_map, new_client_ph_id);
                   break;
                }
                Vue.set(app.c_map, client.addr, client);
