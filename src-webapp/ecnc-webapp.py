@@ -4,9 +4,6 @@ from datetime import datetime
 from flask import Flask, request, session, url_for, redirect, \
 	render_template, abort, g, flash, _app_ctx_stack
 from werkzeug import check_password_hash, generate_password_hash
-from ecnc_lib.Server import DeployUnstoppableCnC as ecnc_du
-from ecnc_lib.Server import ServerCommands as ecnc_s
-import ecnc_lib.Util as ecnc_u
 from flask import jsonify
 from flask import current_app
 import subprocess as sp
@@ -19,6 +16,9 @@ from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
 from geventwebsocket import WebSocketApplication
 
+from Server import DeployUnstoppableCnC as ecnc_du
+from Server import ServerCommands as ecnc_s
+import Util as ecnc_u
 
 class ServerCommandsWSExt(ecnc_s.ServerCommands):
 	"""
