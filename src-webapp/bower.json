@@ -7,8 +7,5 @@
 		"vue-resource": "latest"
 	},
 	"devDependencies": {
-	},
-	"install": {
-		"path": "src-webapp/static/js/"
 	}
 }
