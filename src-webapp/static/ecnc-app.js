@@ -23,6 +23,11 @@ var app = new Vue({
            var timeStr = time.toLocaleTimeString();
 
            switch(msg.msg_type) {
+
+             case 's.hello':
+                console.log('server ws connection established')
+                break;
+
              case 's.client-update':
                client = msg.payload;
                if('xxx-new-client' == client.addr && 'kit-generation-end' == client.status){
