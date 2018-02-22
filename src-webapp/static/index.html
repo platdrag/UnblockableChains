@@ -50,7 +50,9 @@
         <!-- tool section: server -->
         <div class="tool-section tool-section_s">
           <button v-on:click="btn_ws_s_gen_client_kit">s.gen-client-kit</button>
+          <!--
           <button v-on:click="btn_ws_s_new_client">s.client-reg-rx</button>
+            -->
           <button v-on:click="btn_shutdown">s.shutdown</button>
         </div>
 
@@ -59,7 +61,9 @@
           <input class="in_client-cmd" v-model="in_client_shell_cmd" type="text"
             placeholder="shell command - sent to all index clients">
           <button v-on:click="btn_ws_c_work_tx">c.work-tx</button>
+          <!--  
           <button v-on:click="btn_ws_c_work_rx">c.work-rx</button>
+          -->
         </div>
       </div>
     </div>
