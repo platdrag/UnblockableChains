@@ -2,17 +2,34 @@ import logging
 import sys
 
 
+
 class LogWrapper():
-
+	
+	loggers = {}
+	
 	@classmethod
-	def getLogger(cls):
-		_logger = logging.getLogger('root')
-		FORMAT = "[%(asctime)s %(levelname)5s()] %(message)s"
-		dateFmt = "%y-%m-%d %H:%M:%S"
-		logging.basicConfig(format=FORMAT,datefmt=dateFmt)
-		_logger.setLevel(logging.DEBUG)
-		return LogWrapper(_logger)
-
+	def getLogger(cls, name='root',filename=None, level=logging.DEBUG, override =  False):
+		if override or not name in LogWrapper.loggers:
+			_logger = logging.getLogger(name)
+			FORMAT = "[%(asctime)s %(levelname)5s()] %(message)s"
+			dateFmt = "%y-%m-%d %H:%M:%S"
+			formatter = logging.Formatter(FORMAT,dateFmt)
+			
+			_logger.handlers=[]
+			if filename:
+				ch = logging.FileHandler(filename)
+			else:
+				ch = logging.StreamHandler()
+			
+			ch.setFormatter(formatter)
+			_logger.addHandler(ch)
+			_logger.setLevel(logging.DEBUG)
+			
+			LogWrapper.loggers[name] = _logger
+		
+		return LogWrapper(LogWrapper.loggers[name])
+	
+	
 
 	def __init__(self, logger):
 		self.logger = logger
@@ -37,3 +54,22 @@ class LogWrapper():
 
 	def log(self, *args, sep=' '):
 		self.logger.log(sep.join("{}".format(a) for a in args))
+
+
+
+if __name__ == "__main__":
+	g= LogWrapper.getLogger()
+	g.info('hello!!!')
+	
+	f = LogWrapper.getLogger()
+	f.info('hello!!!')
+	
+	m = LogWrapper.getLogger()
+	m.info('hello!!!')
+	
+	m = LogWrapper.getLogger(filename='moshe.log',name='moshe')
+	m.info('hello!!!')
+	m = LogWrapper.getLogger(filename='moshe2.log',name='moshe')
+	m.info('hello!!!')
+	m = LogWrapper.getLogger(filename='moshe2.log',name='moshe',override=True)
+	m.info('hello!!!')

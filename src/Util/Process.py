@@ -3,7 +3,7 @@ import re
 import os
 import signal
 import time
-from Util.timeout import TimeoutException
+from .timeout import TimeoutException
 from .timeout import Timeout
 from .LogWrapper import *
 
@@ -12,7 +12,8 @@ l = LogWrapper.getLogger()
 def runCommand(cmd_arr,
 			   stdin=subprocess.PIPE,
 			   stdout=subprocess.PIPE,
-			   stderr=subprocess.PIPE):
+			   stderr=subprocess.PIPE,
+               shell=False):
 
 
 	proc = subprocess.Popen(
@@ -21,6 +22,25 @@ def runCommand(cmd_arr,
 		stdout=stdout,
 		stderr=stderr,
 		bufsize=1,
+		shell=shell
+	)
+
+	return proc
+
+def runCommandSync(cmd_arr,
+			   stdin=subprocess.PIPE,
+			   stdout=subprocess.PIPE,
+			   stderr=subprocess.PIPE,
+               shell=False):
+
+
+	proc = subprocess.run(
+		cmd_arr,
+		stdin=stdin,
+		stdout=stdout,
+		stderr=stderr,
+		bufsize=1,
+		shell=shell
 	)
 
 	return proc

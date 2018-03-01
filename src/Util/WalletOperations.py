@@ -1,8 +1,8 @@
 import ast, getpass
 import os, string, random
-from Util.Process import Win2LinuxPathConversion,runCommand, format_error_message
-from .keys import make_keystore_json, encode_hex, pubtoaddr, privtopub, privtoaddr, decode_keystore_json
-from Util.LogWrapper import LogWrapper
+from .Process import Win2LinuxPathConversion,runCommand, format_error_message
+from .EtherKeyUtils import make_keystore_json, encode_hex, pubtoaddr, privtopub, privtoaddr, decode_keystore_json
+from .LogWrapper import LogWrapper
 
 l = LogWrapper.getLogger()
 
@@ -71,6 +71,9 @@ def unlockAccount(address, password, web3, duration = 0):
 		raise ValueError('Unable to unlock wallet',address,'. wrong password?')
 	l.info('Successfully unlocked wallet',address)
 
+def getAccountBalance(web3, address, units = 'ether'):
+	return web3.fromWei(web3.eth.getBalance(address), units)
+
 def importAccountToNode(web3, currentAddress, private, password):
 	if not password:
 		password = passwordPrompt ()
@@ -78,5 +81,5 @@ def importAccountToNode(web3, currentAddress, private, password):
 		address = web3.personal.importRawKey(private, password)
 		assert(address == currentAddress)
 		l.info('Account', currentAddress, 'imported to local node')
-	l.info('Account Balance: ',str(web3.fromWei(web3.eth.getBalance(currentAddress), "ether")))
+	l.info('Account Balance: ',str(getAccountBalance(web3, currentAddress)))
 	unlockAccount(currentAddress,password, web3)

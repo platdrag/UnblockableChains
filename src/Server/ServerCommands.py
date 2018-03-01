@@ -2,14 +2,14 @@ import yaml, os, sys, glob, atexit
 from os.path import join as opj
 from web3 import Web3, HTTPProvider
 from web3.contract import ConciseContract
-from Util.EtherKeysUtil import unlockAccount, generatePassword, generateWallet, loadWallet
+from Util.WalletOperations import unlockAccount, generatePassword, generateWallet, loadWallet, getAccountBalance
 from Util.LogWrapper import LogWrapper
 from shutil import copyfile,copy
-from Util.EtherTransaction import *
-from Util.SolidityTypeConversionUtil import *
-l = LogWrapper.getLogger()
+from Util.EtherLogEvents import *
+from Util.SolidityTypeConversions import *
 
 
+import shelve
 
 REGISTRATION_REQUEST_EVENT_NAME = 'RegistrationRequest'
 COMMAND_RESULT_EVENT_NAME = 'CommandResult'
@@ -41,24 +41,32 @@ class ServerCommands:
 		self.gasLimit_ev = conf['gasLimit_ev']
 
 		self.instancesDbFile = conf['instancesDbFile']+'.'+self.contractAddress
-		if os.path.exists(self.instancesDbFile):
-			with open (self.instancesDbFile) as f:
-				db = yaml.safe_load(f)
-				self.instances = db['instances']
-				self.cmdId = db['cmdId']
-			l.debug('loaded instancesDb file to', self.instancesDbFile)
-		else:
-			l.debug('no instance db. creating a new one')
-			self.instances = {}
-			self.cmdId = 0
+		self.instances = shelve.open(self.instancesDbFile, writeback=True)
+		
+		if not 'cmdId' in self.instances:
+			self.instances['cmdId'] = 0
 
-		atexit.register(
-			lambda : self.writeInstancesDB())
+		#
+		#
+		# self.cmdId = shelve.open(self.instancesDbFile + '.cmdId')
+		# if os.path.exists(self.instancesDbFile):
+		# 	with open (self.instancesDbFile) as f:
+		# 		db = yaml.safe_load(f)
+		# 		self.instances = db['instances']
+		# 		self.cmdId = db['cmdId']
+		# 	l.debug('loaded instancesDb file to', self.instancesDbFile)
+		# else:
+		# 	l.debug('no instance db. creating a new one')
+		# 	self.instances = {}
+		# 	self.cmdId = 0
+		#
+		# atexit.register(
+		# 	lambda : self.writeInstancesDB())
 
-	def writeInstancesDB(self):
-		with open(self.instancesDbFile, 'w') as f:
-			yaml.safe_dump({'instances':self.instances,'cmdId':self.cmdId}, f)
-		l.debug('save instancesDb file to',self.instancesDbFile)
+	# def writeInstancesDB(self):
+	# 	with open(self.instancesDbFile, 'w') as f:
+	# 		yaml.safe_dump({'instances':self.instances,'cmdId':self.cmdId}, f)
+	# 	l.debug('save instancesDb file to',self.instancesDbFile)
 
 	def loadContract(self):
 
@@ -66,8 +74,6 @@ class ServerCommands:
 
 		contract = self.web3.eth.contract(self.contractAbi, self.contractAddress,  ContractFactoryClass=ConciseContract)
 		return contract
-
-
 
 	'''
 		
@@ -80,8 +86,6 @@ class ServerCommands:
 	'''
 	def generateNewClientInstance (self, clientConfTemplateFile, fundValue, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
 		
-		
-
 		l.info ("Creating new Client instance")
 		walletPassword = generatePassword(20) if walletPassword == None else walletPassword
 
@@ -143,13 +147,18 @@ class ServerCommands:
 		os.makedirs(opj(generatedDir, 'build'), exist_ok=True)
 		os.makedirs(opj(generatedDir, 'logs'), exist_ok=True)
 
-		l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet")
-		self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': address,
-									 'value': fundValue, 'gas': 21000})
+		
 		self.instances[address] = {}
 		self.instances[address]['public'] = public
 		self.instances[address]['commands'] = {}
+		self.instances.sync()
 
+		# txhash = self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': address,
+		# 							 'value': fundValue, 'gas': 21000})
+		#
+		# logTransactionCost(self.web3, txhash, 'fundTransfer')
+		# l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet",)
+		self.fundTransfer(address,fundValue)
 		self.allowInstance(address)
 
 		#TODO:Split the balance to a small amount up first in sendTransaction and add most of the funds in allowInstance, that way it will only be transfered if instance successfully registered.
@@ -179,11 +188,15 @@ class ServerCommands:
 	def addWork (self, instanceAddress, command):
 		if instanceAddress in self.instances:
 			commandEnc = self.encryptMessage(instanceAddress,command)
-			instanceHash = toBytes32Hash(instanceAddress)
-			txhash = self.contract.addWork(instanceHash, commandEnc, self.cmdId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
-			l.info("Command",self.cmdId," was sent to",instanceAddress, 'txHash:', txhash)
-			self.instances[instanceAddress]['commands'][self.cmdId] = [command, None]
-			self.cmdId += 1
+			instanceHash = sha3AsBytes(instanceAddress)
+			txhash = self.contract.addWork(instanceHash, commandEnc, self.instances['cmdId'], transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
+			
+			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:', txhash)
+			transactionCostLogger.insert(self.web3, txhash, 'addWork',len(command), t)
+			
+			self.instances[instanceAddress]['commands'][self.instances['cmdId']] = [command, None]
+			self.instances['cmdId'] += 1
+			self.instances.sync()
 			return True
 		return False
 
@@ -192,31 +205,65 @@ class ServerCommands:
 
 	def removeInstance (self, instanceAddress):
 		if instanceAddress in self.instances:
-			instanceHash = toBytes32Hash(instanceAddress)
+			instanceHash = sha3AsBytes(instanceAddress)
 			txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
+			
 			l.info("disallowing ",instanceAddress, 'txHash:', txhash)
+			transactionCostLogger.insert(self.web3, txhash, 'removeInstance', len(instanceAddress), t)
+			
+			l.info("sending back all remaining funds of", instanceAddress, 'to owner:', self.ownerAddress)
+			self.unFundTransfer(instanceAddress)
+			
 			return True
 		return False
 
 	def allowInstance (self, instanceAddress):
 		if instanceAddress in self.instances:
-			instanceHash = toBytes32Hash(instanceAddress)
+			instanceHash = sha3AsBytes(instanceAddress)
 			txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
-			l.info("registration allowed for:",instanceAddress,'hash:',instanceHash.encode('utf-8'),'txHash:',txhash)
+			
+			l.info("registration allowed for:",instanceAddress,'hash:',encode_hex(instanceHash),'txHash:',txhash)
+			transactionCostLogger.insert(self.web3, txhash, 'allowInstance',len(instanceAddress), t)
+			
 			return True
 		return False
-
-
+	
+		
+		
 	def registrationConfirmation (self, instanceAddress, sessionId):
 		if instanceAddress in self.instances:
-			instanceHash = toBytes32Hash(instanceAddress)
+			instanceHash = sha3AsBytes(instanceAddress)
 			sessionId = self.encryptMessage(instanceAddress, sessionId)
 			txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
+			
 			l.info("sending successful registration confirmation to",instanceAddress,'txHash:',txhash)
+			transactionCostLogger.insert(self.web3, txhash, 'registrationConfirmation', len(sessionId), t)
+			
 			return True
-		return False
+		else:
+			l.error("Got an a registration request from an address that is not local instances cache! This means that local cache and contract are unsynced! instance address:",instanceAddress)
+			return False
 
-
+	def fundTransfer(self, instanceAddress, fundValue):
+		if instanceAddress in self.instances:
+			txhash = self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': instanceAddress,
+			                                        'value': fundValue, 'gas': 21000})
+			l.info("Sending ", self.web3.fromWei(fundValue, "ether"), "ether to client wallet", )
+			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, t)
+		else:
+			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
+			return False
+		
+	def unFundTransfer(self, instanceAddress):
+		if instanceAddress in self.instances:
+			balance = getAccountBalance(self.web3,instanceAddress,'wei')
+			txhash = self.web3.eth.sendTransaction({'from': instanceAddress, 'to': self.ownerAddress,
+			                                        'value': int(balance), 'gas': 21000})
+			l.info("Sending ", self.web3.fromWei(balance, "ether"), "ether to client wallet", )
+			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, t)
+		else:
+			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
+			return False
 
 	def startInstanceRegistrationRequestWatcher(self):
 			try:
@@ -227,7 +274,7 @@ class ServerCommands:
 																	self.web3,
 																	topicFilters=[])
 
-				def onCommandArrival(tx):
+				def onRegistrationEventArrival(tx):
 					l.debug('new registration request, tx:', tx)
 
 					machineId = getLogEventArg(tx, eventABI, 'machineId')
@@ -252,7 +299,9 @@ class ServerCommands:
 						self.instances[instanceAddress]['sessionAndMachineIdHash'] = sessionAndMachineIdHash
 					else:
 						raise ValueError('Someone tried to register an instance'+instanceAddress+' that is not in local instance cache. This can be cause contract and server are out of sync')
-				self.regRequestFilter.watch(onCommandArrival)
+				
+				self.regRequestFilter.watch(onRegistrationEventArrival)
+				
 			except Exception as e:
 				l.error("Error in Instance Registraton event watcher operation:", e)
 				if self.regRequestFilter and self.regRequestFilter.running:
@@ -267,28 +316,33 @@ class ServerCommands:
 																	self.web3,
 																	topicFilters=[])
 
-				def onCommandArrival(tx):
-					l.debug('new Command result:', tx)
-
-					sessionAndMachineIdHash = bytesToHexString(getLogEventArg(tx, eventABI, 'sessionAndMachineIdHash'))
-					commandResult = getLogEventArg(tx, eventABI, 'commandResult')
-					commandResult = self.decryptMessage(commandResult)
-					cmdId = getLogEventArg(tx, eventABI, 'cmdId')
-
-					transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
-					instanceAddress = transactionReceipt['from']
-
-					if instanceAddress in self.instances:
-						l.info('got new Commandresult for cmdId:',cmdId,"from:", instanceAddress, 'sessionAndMachineIdHash:', sessionAndMachineIdHash)
-						if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
-							self.instances[instanceAddress]['commands'][cmdId][1] = commandResult
-							l.info ('Confirmed match between instance issued command and result:',self.instances[instanceAddress]['commands'][cmdId])
+				def onCommandResultEventArrival(tx):
+					try:
+						l.debug('new Command result:', tx)
+	
+						sessionAndMachineIdHash = bytesToHexString(getLogEventArg(tx, eventABI, 'sessionAndMachineIdHash'))
+						commandResult = getLogEventArg(tx, eventABI, 'commandResult')
+						commandResult = self.decryptMessage(commandResult)
+						cmdId = getLogEventArg(tx, eventABI, 'cmdId')
+	
+						transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
+						instanceAddress = transactionReceipt['from']
+	
+						if instanceAddress in self.instances:
+							l.info('got new Commandresult for cmdId:',cmdId,"from:", instanceAddress, 'sessionAndMachineIdHash:', sessionAndMachineIdHash)
+							if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
+								self.instances[instanceAddress]['commands'][cmdId][1] = commandResult
+								self.instances.sync()
+								l.info ('Confirmed match between instance issued command and result:',str(self.instances[instanceAddress]['commands'][cmdId])[0:200])
+							else:
+								l.error("Mismatch between saved session id and given by client! Client is invalid, recommend to remove!")
+								l.error("given id:",sessionAndMachineIdHash,'saved:',self.instances[instanceAddress]['sessionAndMachineIdHash'])
 						else:
-							l.error("Mismatch between saved session id and given by client! Client is invalid, recommend to remove!")
-							l.error("given id:",sessionAndMachineIdHash,'saved:',self.instances[instanceAddress]['sessionAndMachineIdHash'])
-					else:
-						raise ValueError('got result from instance',instanceAddress,' that is not in local instance cache. This can be cause contract and server are out of sync')
-				self.cmdResultFilter.watch(onCommandArrival)
+							raise ValueError('got result from instance',instanceAddress,' that is not in local instance cache. This can be cause contract and server are out of sync')
+					except Exception as e:
+						l.error("Error getting Command Results:", e)
+				self.cmdResultFilter.watch(onCommandResultEventArrival)
+				
 			except Exception as e:
 				l.error("Error in Command Result event watcher operation:", e)
 				if self.cmdResultFilter and self.cmdResultFilter.running:
@@ -305,8 +359,10 @@ class ServerCommands:
 
 if __name__ == "__main__":
 
-	l.info("base dir ", sys.argv[1])
 	os.chdir(sys.argv[1])
+	l = LogWrapper.getLogger()
+	t = LogWrapper.getLogger(name='transaction', filename=opj('logs', 'transaction.log'))
+	l.info("base dir ", sys.argv[1])
 
 	sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
 
