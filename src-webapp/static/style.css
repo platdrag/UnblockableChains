@@ -1,0 +1,142 @@
+html, body {
+   height: 100%;
+   margin: 0;
+   padding: 0;
+   font-family: sans-serif;
+}
+
+body {
+   display: flex;
+   flex-direction: column;
+}
+
+a {
+   text-decoration: none;
+}
+
+button {
+   padding: 10px;
+   border-style: outset;
+   margin: 5px;
+}
+
+button:hover {
+   border-style: outset;
+   background-color: gold;
+}
+
+.btn_c-index-include:hover {
+   background-color: gold;
+}
+
+.c-in-index {
+   background-color: lightgreen;
+}
+
+.c_status__reg-allowed {
+   background-color: #f9fb8e;
+}
+
+.c_status__registered {
+   background-color: #d2ffff;
+}
+
+.panel {
+   display: flex;
+   flex-direction: column;
+   justify-content: space-between;
+}
+
+.header {
+   background-color: black;
+   color: white;
+   font-size: 1.2em;
+   padding: 10px;
+}
+
+.panel-header {
+   flex-basis: 10%;
+   background-color: grey;
+   color: white;
+   padding: 10px;
+   background-color: black;
+}
+
+.panel-body {
+   display: flex;
+   flex-direction: column;
+   min-height: 120px;
+}
+
+.p_top {
+   padding: 10px;
+}
+
+.p_server-status .panel-body {
+   padding: 10px;
+}
+
+.tool-section {
+   padding: 10px;
+   align-items: center;
+   display: flex;
+}
+
+.tool-section_s {
+   
+}
+
+.tool-section_c {
+   
+}
+
+.panel_tool {
+   
+}
+
+.panel_output {
+   
+}
+
+.client-row {
+   display: flex;
+   font-family: monospace;
+   justify-content: space-between;
+   padding-left: 10px;
+   background-color: #e1e1e1;
+   line-height: 30px;
+   margin-bottom: 3px;
+}
+
+.client-row:hover {
+   background-color: #c1c1c1;
+}
+
+.client-selected {
+   background-color: gold;
+}
+
+.cmd-row {
+   display: flex;
+   font-family: monospace;
+   paddi ng: 3px;
+   padding-left: 10px;
+   line-height: 30px;
+}
+
+.cmd-row_shell-cmd {
+   color: green;
+}
+
+.cmd-row_output {
+   color: red;
+}
+
+.in_client-cmd {
+   padding: 5px;
+   background-color: #c9ff9a;
+   font-size: 1.2em;
+   height: 25px;
+   width: 48ch;
+   font-family: monospace;
+}

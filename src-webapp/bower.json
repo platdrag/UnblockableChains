@@ -1,0 +1,11 @@
+{
+	"version": "0.1.0",
+	"name": "ecnc",
+	"appPath": "src/main/ecnc-webapp/",
+	"dependencies": {
+		"vue": "latest",
+		"vue-resource": "latest"
+	},
+	"devDependencies": {
+	}
+}

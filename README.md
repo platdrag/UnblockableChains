@@ -1,11 +1,17 @@
 # About
 Nothing interesting yet...
 
-# Dependencies - Python
+# Dependencies
 - python3-bitcoin
 - python3-pbkdf2
 - py-solc
 - web3
+
+# Dependencies - web UI
+- python3-flask
+- python3-werkzeug
+- Flask-Sockets
+- gevent-websocket
 
 # Use - linux
 - under `conf/deployment/DeploymentConf.BASE.yaml`, adjust the following values:
@@ -40,3 +46,23 @@ Nothing interesting yet...
     >>> sc.addWork('0xa55be06a805566d480103cea559c4d1bc3f729d2', 'echo awesome')
     // ... log output
     ... confirmed match between instance issued command and result: ['echo awesome', 'awsome']
+
+
+# Use - web UI
+- run the deployment script as described above
+- create `static/`, `templates` dir symlinks:
+
+    ln -s src-webapp/static .
+    ln -s src-webapp/templates .
+
+- run the webapp:
+
+    export PYTHONPATH=src
+    python3 src-webapp/ecnc-webapp.py
+
+- access `http://127.0.0.1:5000/`
+- generate one or more client kits
+- run client nodes accordingly
+- wait for the clients to register
+- add/rm clients from index
+- run shell commands on index-included clients 

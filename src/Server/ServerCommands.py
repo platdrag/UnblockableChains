@@ -166,7 +166,7 @@ class ServerCommands:
 
 
 
-		return clientConfTemplate
+		return address, clientConfTemplate
 
 	def decryptMessage(self, msg, decrypt=True):
 		if decrypt:
@@ -366,7 +366,7 @@ if __name__ == "__main__":
 
 	sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
 
-	# clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)
+	# clientAddress, clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)
 
 	sc.startAllWatchers()
 
