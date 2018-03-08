@@ -173,7 +173,7 @@ with app.app_context():
   
 	srv_conf_path = 'conf/server/ServerConf.yaml'
 	sc = ServerCommandsWSExt(srv_conf_path)
-	# xxx sc.startAllWatchers()
+	sc.startAllWatchers()
 	current_app.sc = sc
 	current_app.c_map_by_addr = sc.instances
 
