@@ -73,8 +73,8 @@ class ECnCWSApp(WebSocketApplication):
 
 		log.info("ws: connection open, sending client map")
 
+		self.ws_write('s.hello', None)
 		for c_addr, c in self.c_map_by_addr.items():
-			self.ws_write('s.hello', None)
 			self.ws_write('s.client-update', c)
 
 	def on_c_reg(self, c_addr, session_id):
