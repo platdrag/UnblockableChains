@@ -30,7 +30,7 @@ class ClientCommands:
 		
 		if conf['opMode'] == 'privateNet':
 			self.web3.admin.addPeer(conf[self.opMode]['enode'])
-			peers = waitFor (lambda : self.web3.admin.peers, emptyResponse=[],pollInterval=0.1, maxRetries=10)
+			peers = waitFor (lambda : self.web3.admin.peers, pollInterval=0.1, maxRetries=10)
 			assert (len(peers) > 0)
 			l.info('connected peers:',self.web3.admin.peers)
 
@@ -80,10 +80,10 @@ class ClientCommands:
 																self.contractAddress,
 																self.web3,
 																topicFilters=[self.web3.sha3(self.address)])
-			tx = waitFor(lambda: self.web3.eth.getTransactionReceipt(txHash), emptyResponse=None, pollInterval=1, maxRetries=500)
+			tx = waitFor(lambda: self.web3.eth.getTransactionReceipt(txHash), pollInterval=1, maxRetries=500)
 			if not tx or tx['gasUsed'] == self.gasLimit_ev:
 				raise ValueError('Error in transaction execution. maximum gas used. out of gas or permission issue',tx)
-			txs = waitFor(lambda: self.commandFilter.get(True), emptyResponse=[], pollInterval=1, maxRetries=500)
+			txs = waitFor(lambda: self.commandFilter.get(True), pollInterval=1, maxRetries=500)
 			self.web3.eth.uninstallFilter(self.commandFilter.filter_id)
 			for tx in txs:
 				sessionId = getLogEventArg(tx, eventABI, 'sessionId')

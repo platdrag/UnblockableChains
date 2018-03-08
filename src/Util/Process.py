@@ -114,19 +114,24 @@ def format_error_message(prefix, command, return_code, stdoutdata, stderrdata):
 	return "\n".join(lines)
 
 
-def waitFor(operation, emptyResponse=None, pollInterval=0.5, maxRetries=10):
+def waitFor(operation, pollInterval=0.5, maxRetries=10):
 
-	res = emptyResponse
+	res = None
 	retries = -1
-	while res == emptyResponse:
+	while not res:
 		#l.debug('trying',str(operation),'attempt',retries,'of',maxRetries)
-		res = operation()
+
+		try:
+			res = operation()
+		except: # catch 'unknown transaction' on client.registerInstance()
+			res = None
+			pass
 
 		time.sleep(pollInterval)
 		retries +=1
 		if retries > maxRetries:
-			raise TimeoutException("Unable to get a response for "+str(operation)+". Perhaps destination is not responding?")
+			raise TimeoutException("Unable to get a response for " + str(operation) + ", perhaps destination is not responding?")
 
-	l.debug("waiter",str(operation), 'executed in ', retries * pollInterval)
+	l.debug("waiter", str(operation), 'executed, retry count: ', retries, ', dur-sec: ', retries * pollInterval)
 	return res
 
