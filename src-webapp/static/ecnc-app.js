@@ -80,8 +80,10 @@ var app = new Vue({
       c_index_update: function(client, include, event) {
           if (include){
              Vue.set(app.c_index, client.addr, client);
+             console.info('c-index: client added: ' + client.addr)
           }else{
              Vue.delete(app.c_index, client.addr)
+             console.info('c-index: client rm: ' + client.addr)
           };
       },
       
