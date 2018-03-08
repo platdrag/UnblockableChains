@@ -109,7 +109,9 @@ class ECnCWSApp(WebSocketApplication):
 			c_addr, c_conf = self.sc.generateNewClientInstance(fundValue=10 ** 18,
 												 clientConfTemplateFile='conf/clientGen/ClientConf.TEMPLATE.yaml',
 												 clientId=c_id,
-												 port=30304 + self.c_counter)
+												 port=30304 + self.c_counter,
+												 walletJson=None,
+												 walletPassword=None)
 
 			#
 			# hack: new-client-placeholder: rm
