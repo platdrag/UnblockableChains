@@ -32,12 +32,17 @@ var app = new Vue({
 
              case 's.client-update':
                client = msg.payload;
+
                if(new_client_ph_id == client.addr && 'kit-generation-end' == client.status){
                   Vue.delete(app.c_map, new_client_ph_id);
                   break;
                }
+
+               if ('registered' == client.status){
+                  app.c_index_update(client, true);
+               }
+
                Vue.set(app.c_map, client.addr, client);
-               app.c_index_update(client, true)
                console.log('rx: new-client: ' + client.addr)
                break;
 
