@@ -29,7 +29,12 @@ def getField(tx,field):
 
 
 def logTransactionCost(web3, txhash, transName, dataLength, logger) -> bool:
-	receipt = web3.eth.getTransactionReceipt(txhash)
+
+	try:
+		receipt = web3.eth.getTransactionReceipt(txhash)
+	except:  # catch 'unknown transaction'
+		return False
+
 	if receipt:
 		trans = web3.eth.getTransaction(txhash)
 		to = receipt['to'] if receipt['to'] else receipt['contractAddress']
