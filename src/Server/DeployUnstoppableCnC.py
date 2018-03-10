@@ -208,6 +208,7 @@ if __name__ == "__main__":
 	l.info ("base dir ",sys.argv[1])
 	
 	conf = loadConf()
+	l.info('Working in', conf['opMode'], 'mode')
 	
 	solcPath = conf['solc'] + ('.exe' if os.name == 'nt' else '')
 	os.environ['SOLC_BINARY'] = opj(os.getcwd(), solcPath)

@@ -248,8 +248,9 @@ if __name__ == "__main__":
 	l.info ("base dir ",sys.argv[1])
 
 	confFile = sys.argv[2]
-
-	cc = ClientCommands(confFile)
+	
+	sessionId = sys.argv[3] if sys.argv[3] else None
+	cc = ClientCommands(confFile, sessionId)
 
 	cc.mainLoop()
 	

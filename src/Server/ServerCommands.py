@@ -22,6 +22,9 @@ class ServerCommands:
 		with open(confFile) as f:
 			conf = yaml.safe_load(f)
 
+		
+		l.info('Working in',conf['opMode'],'mode')
+
 		self.contractAddress = conf['contract']['address']
 		self.contractAbi = conf['contract']['abi']
 
