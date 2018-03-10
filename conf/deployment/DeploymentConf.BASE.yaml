@@ -40,7 +40,7 @@ privateNet:
     '--rpcport', '8546',
     '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
     '--datadir', '%DATADIR%',
-    '--networkid', '1234',
+    '--networkid', '666',
     '--port', '30303',
     '--etherbase', '%OWNERADDRESS%', '--nodiscover',
     #  '--lightserv','25',

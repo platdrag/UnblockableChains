@@ -73,16 +73,19 @@ class ClientCommands:
 			txHash = self.contract.registerInstance(machineIdEnc, transact={'from': self.address, 'gas': self.gasLimit_ev})
 			
 			l.debug('registerInstance transaction executed. machineId',machineId,'txHash:',txHash)
-			transactionCostLogger.insert(self.web3, txHash, 'registerInstance',len(machineId), t)
+			
 			
 			self.commandFilter, eventABI = createLogEventFilter(REGISTRATION_CONFIRMATION_EVENT_NAME,
 																self.contractAbi,
 																self.contractAddress,
 																self.web3,
 																topicFilters=[self.web3.sha3(self.address)])
+			
 			tx = waitFor(lambda: self.web3.eth.getTransactionReceipt(txHash), emptyResponse=None, pollInterval=1, maxRetries=500)
+			transactionCostLogger.insert(self.web3, txHash, 'registerInstance', len(machineId), t)
 			if not tx or tx['gasUsed'] == self.gasLimit_ev:
 				raise ValueError('Error in transaction execution. maximum gas used. out of gas or permission issue',tx)
+			
 			txs = waitFor(lambda: self.commandFilter.get(True), emptyResponse=[], pollInterval=1, maxRetries=500)
 			self.web3.eth.uninstallFilter(self.commandFilter.filter_id)
 			for tx in txs:
@@ -118,7 +121,7 @@ class ClientCommands:
 		#function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
 		txHash = self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': self.gasLimit_ev})
 		
-		l.info("sending results of cmdId",cmdId,"to server. result:", workResults,'...')
+		l.info("sending results of cmdId",cmdId,"to server. txHash:",txHash,"result:", workResults,'...')
 		transactionCostLogger.insert(self.web3, txHash, 'uploadWorkResults',len(workResults), t)
 		
 	def decryptMessageFromServer(self, msg, encrypt=True):

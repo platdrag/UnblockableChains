@@ -14,13 +14,12 @@ def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters
 	eventHash = web3.sha3(encode_hex(eventSignature))
 	l.debug('creating log filter. eventSignature:', eventSignature, 'eventHash:', eventHash, 'filters:',topicFilters)
 
-	commandFilter = web3.eth.filter({'from': fromAddress,
+	commandFilter = web3.eth.filter({'address': fromAddress,
 											   'topics': [eventHash]+topicFilters})
 	return commandFilter, eventABI
 
 
-def getLogEventArg(tx, eventABI, argName)\
-		:
+def getLogEventArg(tx, eventABI, argName):
 	data = get_event_data(eventABI, tx)
 	return data['args'][argName]
 
@@ -45,8 +44,8 @@ transactionCostLogger.start()
 
 def waitForNodeToSync(web3):
 	l.info('waiting for node to sync...')
-	while web3.eth.syncing or web3.eth.blockNumber == 0:
-		l.debug('current synced block is:',
-		        web3.eth.blockNumber if web3.eth.blockNumber == 0 else web3.eth.syncing['currentBlock'])
+	while web3.eth.syncing or web3.eth.blockNumber == 0 or len(web3.admin.peers) < 1:
+		bn = web3.eth.blockNumber if web3.eth.blockNumber != 0 else web3.eth.syncing['currentBlock']
+		l.debug('current synced block is:', bn, 'num peers:', len(web3.admin.peers))
 		time.sleep(1)
 	l.info('chain Sync done!')
