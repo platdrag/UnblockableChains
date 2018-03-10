@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
 	confFile = sys.argv[2]
 	
-	sessionId = sys.argv[3] if sys.argv[3] else None
+	sessionId = sys.argv[3] if len(sys.argv) > 3 else None
 	cc = ClientCommands(confFile, sessionId)
 
 	cc.mainLoop()
