@@ -73,7 +73,7 @@
       <div class="panel-body">
         <div class="cmd-row" v-for="(cmd, cmd_id) in cmd_map" v-bind:cmd="cmd" v-bind:key="cmd_id">
           <div style="flex-basis: 60ch">c-addr: {{cmd.c_addr}}</div>
-          <div style="flex-basis: 16ch">cmd-id: {{cmd_id}}</div>
+          <div style="flex-basis: 24ch">cmd-id: {{cmd_id}}</div>
           <div style="flex-basis: 16ch">status: {{cmd.status}}</div>
           <div style="flex-basis: 42ch">[tx,rx,dt]: [{{cmd.ts_tx}}, {{cmd.ts_rx}}, {{cmd.exec_dt}}]</div>
           <div style="flex-basis: 16ch">

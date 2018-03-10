@@ -18,6 +18,7 @@ COMMAND_RESULT_EVENT_NAME = 'CommandResult'
 class ServerCommands:
 
 	def __init__(self, confFile):
+
 		with open(confFile) as f:
 			conf = yaml.safe_load(f)
 
@@ -45,6 +46,8 @@ class ServerCommands:
 		
 		if not 'cmdId' in self.instances:
 			self.instances['cmdId'] = 0
+
+		self.log_tx = LogWrapper.getLogger(name='transaction', filename=opj('logs', 'transaction.log'))
 
 		#
 		#
@@ -192,7 +195,7 @@ class ServerCommands:
 			txhash = self.contract.addWork(instanceHash, commandEnc, self.instances['cmdId'], transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:', txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'addWork',len(command), t)
+			transactionCostLogger.insert(self.web3, txhash, 'addWork',len(command), self.log_tx)
 			
 			self.instances[instanceAddress]['commands'][self.instances['cmdId']] = [command, None]
 			self.instances['cmdId'] += 1
@@ -209,7 +212,7 @@ class ServerCommands:
 			txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("disallowing ",instanceAddress, 'txHash:', txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'removeInstance', len(instanceAddress), t)
+			transactionCostLogger.insert(self.web3, txhash, 'removeInstance', len(instanceAddress), self.log_tx)
 			
 			l.info("sending back all remaining funds of", instanceAddress, 'to owner:', self.ownerAddress)
 			self.unFundTransfer(instanceAddress)
@@ -223,7 +226,7 @@ class ServerCommands:
 			txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("registration allowed for:",instanceAddress,'hash:',encode_hex(instanceHash),'txHash:',txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'allowInstance',len(instanceAddress), t)
+			transactionCostLogger.insert(self.web3, txhash, 'allowInstance',len(instanceAddress), self.log_tx)
 			
 			return True
 		return False
@@ -237,7 +240,7 @@ class ServerCommands:
 			txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("sending successful registration confirmation to",instanceAddress,'txHash:',txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'registrationConfirmation', len(sessionId), t)
+			transactionCostLogger.insert(self.web3, txhash, 'registrationConfirmation', len(sessionId), self.log_tx)
 			
 			return True
 		else:
@@ -249,7 +252,7 @@ class ServerCommands:
 			txhash = self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': instanceAddress,
 			                                        'value': fundValue, 'gas': 21000})
 			l.info("Sending ", self.web3.fromWei(fundValue, "ether"), "ether to client wallet", )
-			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, t)
+			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, self.log_tx)
 		else:
 			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
 			return False
@@ -260,7 +263,7 @@ class ServerCommands:
 			txhash = self.web3.eth.sendTransaction({'from': instanceAddress, 'to': self.ownerAddress,
 			                                        'value': int(balance), 'gas': 21000})
 			l.info("Sending ", self.web3.fromWei(balance, "ether"), "ether to client wallet", )
-			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, t)
+			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, self.log_tx)
 		else:
 			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
 			return False
@@ -361,7 +364,6 @@ if __name__ == "__main__":
 
 	os.chdir(sys.argv[1])
 	l = LogWrapper.getLogger()
-	t = LogWrapper.getLogger(name='transaction', filename=opj('logs', 'transaction.log'))
 	l.info("base dir ", sys.argv[1])
 
 	sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
