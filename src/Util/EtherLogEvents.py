@@ -50,7 +50,7 @@ transactionCostLogger.start()
 def waitForNodeToSync(web3):
 	l.info('waiting for node to sync...')
 	while web3.eth.syncing or web3.eth.blockNumber == 0 or len(web3.admin.peers) < 1:
-		bn = web3.eth.blockNumber if web3.eth.blockNumber != 0 else web3.eth.syncing['currentBlock']
+		bn = web3.eth.syncing['currentBlock'] if web3.eth.syncing else web3.eth.blockNumber
 		l.debug('current synced block is:', bn, 'num peers:', len(web3.admin.peers))
 		time.sleep(1)
 	l.info('chain Sync done!')

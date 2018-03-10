@@ -30,7 +30,7 @@ privateNet:
     '--rpcport', '%RPCPORT%',
     '--rpcapi', 'admin,debug,eth,miner,net,personal,shh,txpool,web3,ws',
     '--datadir', '%DATADIR%',
-    '--networkid', '1234',
+    '--networkid', '666',
     '--port', '%NODEPORT%',
     '--ipcdisable',
     '--nodiscover',

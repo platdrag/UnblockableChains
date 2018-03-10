@@ -23,7 +23,7 @@ class LogWrapper():
 			
 			ch.setFormatter(formatter)
 			_logger.addHandler(ch)
-			_logger.setLevel(logging.DEBUG)
+			_logger.setLevel(level)
 			
 			LogWrapper.loggers[name] = _logger
 		
