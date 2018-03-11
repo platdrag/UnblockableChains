@@ -1,4 +1,4 @@
-import yaml, os, sys, glob, atexit
+import yaml, os, sys, glob, atexit,json
 from os.path import join as opj
 from web3 import Web3, HTTPProvider
 from web3.contract import ConciseContract
@@ -73,7 +73,8 @@ class ServerCommands:
 
 	def loadContract(self):
 
-		l.info('loading contract from:', self.contractAddress, self.contractAbi)
+		l.info('loading contract from:', self.contractAddress)
+		l.debug('contract abi:', self.contractAbi)
 
 		contract = self.web3.eth.contract(self.contractAbi, self.contractAddress,  ContractFactoryClass=ConciseContract)
 		return contract
@@ -359,6 +360,13 @@ class ServerCommands:
 		self.cmdResultFilter.stopWatching()
 		self.regRequestFilter.stopWatching()
 
+
+	def printCommandResult (self, instance, cmdId):
+		if instance in self.instances:
+			if cmdId in self.instances[instance]['commands']:
+				print ('command:',sc.instances[instance]['commands'][cmdId][0])
+				result = json.loads(sc.instances[instance]['commands'][cmdId][1])
+				print('result:', result['output'])
 
 if __name__ == "__main__":
 

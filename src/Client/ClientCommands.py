@@ -55,7 +55,8 @@ class ClientCommands:
 
 
 	def loadContract(self):
-		l.info('loading contract from:', self.contractAddress, self.contractAbi)
+		l.info('loading contract from:', self.contractAddress)
+		l.debug('contract abi:', self.contractAbi)
 
 		contract = self.web3.eth.contract(self.contractAbi, self.contractAddress,  ContractFactoryClass=ConciseContract)
 		return contract
