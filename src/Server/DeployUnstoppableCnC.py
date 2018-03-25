@@ -11,14 +11,24 @@ from web3.contract import ConciseContract
 from Util.WalletOperations import *
 from Util.Process import *
 from Util.LogWrapper import LogWrapper
-from Util.EtherLogEvents import transactionCostLogger,waitForNodeToSync
+from Util.EtherLogEvents import waitForNodeToSync
 import shutil
 import signal
-import atexit
+import argparse
+from Util.TransactionLogger import TransactionLogger
 
+BASE_DEPLOYMENT_FILE = opj('conf', 'deployment', 'DeploymentConf.BASE.yaml')
+OVERWRITE_DEPLOYMENT_FILE = opj('conf', 'deployment', 'DeploymentConf.OVERWRITE.yaml')
+TRANSACTION_LOG_LOC = opj('logs', 'transaction.log')
 
 def deployContract (web3, conf, contractAddress = None):
-	#with open ('UnstoppableCnC.sol') as f:
+	'''
+	Deploy a new contract, if not already deployed
+	:param web3:
+	:param conf:
+	:param contractAddress: Deploy new contract if None, else return the existing one.
+	:return:
+	'''
 	with open (conf['contractUri']) as f:
 		cs=f.read()
 
@@ -34,6 +44,7 @@ def deployContract (web3, conf, contractAddress = None):
 		l.debug('transaction deploy contract, tx_hash:',tx_hash)
 
 		# Get tx receipt to get contract address
+		l.info('Waiting for contract transaction to be mined...')
 		tx_receipt = None
 		while not tx_receipt:
 			try:
@@ -45,10 +56,10 @@ def deployContract (web3, conf, contractAddress = None):
 		contractAddress = tx_receipt['contractAddress']
 		conf['contractAddress'] = contractAddress
 		
-		modifyConfigFile(opj('conf', 'deployment', 'DeploymentConf.OVERWRITE.yaml'), 'contractAddress', contractAddress)
+		modifyConfigFile(OVERWRITE_DEPLOYMENT_FILE, 'contractAddress', contractAddress)
 		
 		l.info('contract successfully deployed: ',contractAddress, 'gas Used:',tx_receipt['gasUsed'])
-		transactionCostLogger.insert(web3,tx_hash,'deployContract_'+conf['contractName'],len(compiled_sol), t)
+		transactionCostLogger.insert(tx_hash,'deployContract_'+conf['contractName'],len(compiled_sol))
 	else:
 		l.info('contract successfully loaded: ', contractAddress)
 	l.debug(' abi:', contract_interface['abi'])
@@ -64,6 +75,12 @@ def deployContract (web3, conf, contractAddress = None):
 
 
 def runGethNode(conf, freshStart = False):
+	'''
+	Runs the local server geth node. Starts it in full node mode.
+	:param conf:
+	:param freshStart: if True, delete all node data, and start it fresh.
+	:return:
+	'''
 	opMode = conf['opMode']
 	gethLockFile = opj(conf[opMode]['BlockChainData'], 'LOCK.pid')
 	if (os.path.isfile(gethLockFile)):
@@ -108,25 +125,32 @@ def runGethNode(conf, freshStart = False):
 	cmd = conf[opMode]['gethCmd']
 	cmd = [x.replace('%DATADIR%', conf[opMode]['BlockChainData']) for x in cmd]
 	cmd = [x.replace('%OWNERADDRESS%', conf['ownerAddress']) for x in cmd]
+	
+	gethLogFile = opj('logs', 'geth.server.log')
 	l.info('Running geth node: cmd: ', ' '.join(cmd))
-	proc = runCommand(cmd, stderr=open(opj('logs', 'geth.server.log'), 'a'))
-
+	
+	proc = runCommand(cmd, stderr=open(gethLogFile, 'a'))
+	
 	if proc.returncode:
 		std,sterr = proc.communicate()
 		raise ValueError(format_error_message("Error trying to run geth node",cmd,proc.returncode,std,sterr))
 
-	time.sleep(3)
-
+	time.sleep(3) #allowing for geth to init
 
 	with open(gethLockFile,'w') as f:
 		f.write(str(proc.pid))
-	l.info('Geth node running. PID:',str(proc.pid))
+	l.info('Geth node running. PID:',str(proc.pid), 'Log file location:',gethLogFile)
 
 	return proc
 
-
-
 def modifyConfigFile (filename, key, value):
+	'''
+	Load-Modify-Write a key in a yaml config file.
+	:param filename:
+	:param key:
+	:param value:
+	:return:
+	'''
 	conf = yaml.safe_load(open(filename)) if exists(filename) else {}
 	with open(filename, 'w') as f:
 		conf[key]=value
@@ -135,15 +159,19 @@ def modifyConfigFile (filename, key, value):
 
 
 def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
+	'''
+	will load an wallet account from config, or generate a new one if empty
+	:param conf:
+	:param regenerateOwnerAccount: Force account regeneration
+	:return:
+	'''
 	ownerChanged = False
 	if not conf['ownerWallet'] or regenerateOwnerAccount:
 		l.info("No account set. Generating a new account")
-		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] =  generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
+		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] = generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
 
 		l.info('Generated new owner wallet. Persisting changes to conf file')
-		modifyConfigFile(opj('conf', 'deployment', 'DeploymentConf.OVERWRITE.yaml'), 'ownerWallet', conf['ownerWallet'])
-		# with open(opj('conf', 'deployment', 'DeploymentConf.OVERWRITE.yaml'),'w') as f:
-		# 	yaml.safe_dump({'ownerWallet':conf['ownerWallet']}, f, default_flow_style=False)
+		modifyConfigFile(OVERWRITE_DEPLOYMENT_FILE, 'ownerWallet', conf['ownerWallet'])
 
 		ownerChanged = True
 	else:
@@ -159,6 +187,12 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 
 
 def generateClientsTemplates(web3, conf):
+	'''
+	Generates a client Template, based on both deployment and client base configuration files
+	:param web3:
+	:param conf:
+	:return:
+	'''
 	clientConfBase = yaml.safe_load(open(opj('conf', 'clientGen', 'ClientConf.BASE.yaml')))
 	clientConfBase['opMode'] = conf['opMode']
 	clientConfBase['contract']['name'] = conf['contractName']
@@ -174,6 +208,12 @@ def generateClientsTemplates(web3, conf):
 		yaml.safe_dump(clientConfBase, f)
 
 def generateServerConf(web3, conf):
+	'''
+	Generates server configuration based on base deployment configuration file
+	:param web3:
+	:param conf:
+	:return:
+	'''
 	serverConf = {}
 	serverConf['contract'] = {}
 	serverConf['contract']['name'] = conf['contractName']
@@ -192,20 +232,45 @@ def generateServerConf(web3, conf):
 		yaml.safe_dump(serverConf, f)
 
 def loadConf():
-	confBase = yaml.safe_load(open(opj('conf', 'deployment', 'DeploymentConf.BASE.yaml')))
-	cafile = opj('conf', 'deployment', 'DeploymentConf.OVERWRITE.yaml')
-	confAuto = yaml.safe_load(open(cafile)) if exists(cafile) else None
-	conf = {**confBase, **(confAuto if confAuto else {})}
+	'''
+	Loads deployment config file. First load BASE file and then the OVERWRITE file.
+	'''
+	confBase = yaml.safe_load(open(BASE_DEPLOYMENT_FILE))
+	confOverwrite = yaml.safe_load(open(OVERWRITE_DEPLOYMENT_FILE)) if exists(OVERWRITE_DEPLOYMENT_FILE) else None
+	conf = {**confBase, **(confOverwrite if confOverwrite else {})}
 	return conf
 
+def reset():
+	'''
+	Resets the deployment. Will cause for new generation of everything. use with care.
+	'''
+	if exists(OVERWRITE_DEPLOYMENT_FILE):
+		os.remove(OVERWRITE_DEPLOYMENT_FILE)
+
 if __name__ == "__main__":
-	os.chdir(sys.argv[1])
+	parser = argparse.ArgumentParser(
+		prog = 'Deployment script for the Controller backend',
+		description = 'This script initiates the controller backend. It will generate owner account, run a local full geth node, '
+		              'deploy the smart contract and create all necessary configuration to run controller UI/scripts, and to generate clients.'
+		              ' Before running edit configuration file '+BASE_DEPLOYMENT_FILE+'.'
+		              ' Run --reset after each time opMode has been changed or if you wish to start over.'
+                      'NOTE: After running this script geth node will remain active in the background. If geth gets killed just run this script again with generated config to restart it.'
+	)
+	parser.add_argument("baseDir", help="Location of base directory. all conf, scripts and bin files are assumed to exist in a subdirectory of base dir.")
+	parser.add_argument('--reset', default=False, action='store_true', help="Resets all generated files, configuration and blockchain data.")
+	args = parser.parse_args()
 	
-	l = LogWrapper.getLogger()
-	t = LogWrapper.getLogger(name='transaction', filename=opj('logs', 'transaction.log'))
-	t.info('======== New Run', time.time(), '========')
+	os.chdir(args.baseDir)
 	
-	l.info ("base dir ",sys.argv[1])
+	l = LogWrapper.getDefaultLogger()
+	l.info ("Base dir:",args.baseDir)
+	
+	if args.reset:
+		l.warning('!!! Doing a complete reset. Generated data will be deleted in 3 seconds (CTRL+C now if you wish to cancel) !!!')
+		for i in range (1,4):
+			l.warning(i)
+			time.sleep(1)
+		reset()
 	
 	conf = loadConf()
 	l.info('Working in', conf['opMode'], 'mode')
@@ -216,23 +281,22 @@ if __name__ == "__main__":
 	#Loading/Generating new account for the owner of the contract
 	ownerChanged = loadOrGenerateAccount(conf,regenerateOwnerAccount = False)
 	
-	
 	gethProc = runGethNode(conf, ownerChanged)
-	
-	# atexit.register(
-	#	 lambda : kill_proc(gethProc))
 	
 	#Connecting to the get Node
 	web3 = Web3(HTTPProvider(conf['nodeRpcUrl']))
 	
 	l.info("Node is up at:", web3.admin.nodeInfo.enode)
 	
+	transactionCostLogger = TransactionLogger(TRANSACTION_LOG_LOC, web3)
+	transactionCostLogger.logger.info('======== New Run', time.time(), '========')
+	
 	
 	if conf['opMode'] == 'privateNet':
-		l.debug("Staring miners...")
-		web3.miner.start(1)#For some reason geth doesnt auto start miners... 8|
+		l.info("Staring miners...")
+		web3.miner.start(1) #For some reason geth doesnt auto start miners... 8|
 	
-	#Registering the owner account to the node, unlocking the account.
+	#Registering the owner account to the node and unlocking it.
 	importAccountToNode(web3, conf['ownerAddress'], conf['ownerPrivate'], conf['ownerWalletPassword'])
 	
 	if conf['opMode'] != 'privateNet':
@@ -244,5 +308,6 @@ if __name__ == "__main__":
 	#Generating templates with information need for generating a self contained client.
 	generateClientsTemplates (web3,conf)
 	
+	#generates configuration for UI/Server commands scripts
 	generateServerConf(web3, conf)
 

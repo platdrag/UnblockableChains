@@ -7,7 +7,7 @@ from .timeout import TimeoutException
 from .timeout import Timeout
 from .LogWrapper import *
 
-l = LogWrapper.getLogger()
+l = LogWrapper.getDefaultLogger()
 
 def runCommand(cmd_arr,
 			   stdin=subprocess.PIPE,

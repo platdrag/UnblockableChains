@@ -158,7 +158,7 @@ app.config.from_envvar('ECNC_SETTINGS', silent=True)
 
 sockets = Sockets(app)
 
-log = ecnc_u.LogWrapper.getLogger()
+log = ecnc_u.LogWrapper.getDefaultLogger()
 
 #
 # init global context

@@ -4,12 +4,12 @@ from .Process import Win2LinuxPathConversion,runCommand, format_error_message
 from .EtherKeyUtils import make_keystore_json, encode_hex, pubtoaddr, privtopub, privtoaddr, decode_keystore_json
 from .LogWrapper import LogWrapper
 
-l = LogWrapper.getLogger()
+l = LogWrapper.getDefaultLogger()
 
 def generateKeyPair (keyGenScript) -> (str,str):
 	'''
 	Use openssl to generate a secp256k1 key pair to be used in ethereum.
-	Windows users uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
+	Windows users (Win 10 Only!) uses the linux subsystem for windows to run bash.exe to run the .sh script. cygwin might also be used
 	Under linux script runs natively.
 	:param scriptFile: config with keyGenScript correctly set.
 	:return: public, private as hex string format
@@ -40,7 +40,7 @@ def generateKeyPair (keyGenScript) -> (str,str):
 def generatePassword(size=12, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
 	return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
-def passwordPrompt (password = None, msg ='Enter password to unlock owner wallet'):
+def passwordPrompt (password = None, msg ='Enter password to unlock owner wallet: '):
 	return getpass.getpass(msg) if not password else password
 
 

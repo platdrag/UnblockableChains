@@ -6,7 +6,7 @@ from .LogWrapper import LogWrapper
 from .PollerQueue import PollerQueue
 import time
 
-l = LogWrapper.getLogger()
+l = LogWrapper.getDefaultLogger()
 
 def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters:[]) -> (LogFilter, str):
 	eventABI = filter_by_name(eventName, contractAbi)[0]
@@ -25,26 +25,6 @@ def getLogEventArg(tx, eventABI, argName):
 
 def getField(tx,field):
 	return tx[field]
-
-
-def logTransactionCost(web3, txhash, transName, dataLength, logger) -> bool:
-
-	try:
-		receipt = web3.eth.getTransactionReceipt(txhash)
-	except:  # catch 'unknown transaction'
-		return False
-
-	if receipt:
-		trans = web3.eth.getTransaction(txhash)
-		to = receipt['to'] if receipt['to'] else receipt['contractAddress']
-		# txHash, block Number, from, to, transaction name, gas Limit, gas Used, gas Price, total cost, data size
-		logger.info(txhash, receipt['blockNumber'], receipt['from'], to, transName, trans['gas'], receipt['gasUsed'],
-		       trans['gasPrice'], web3.fromWei(receipt['gasUsed'] * trans['gasPrice'], 'ether'),dataLength, sep='\t')
-		return True
-	return False
-
-transactionCostLogger = PollerQueue(logTransactionCost)
-transactionCostLogger.start()
 
 
 def waitForNodeToSync(web3):

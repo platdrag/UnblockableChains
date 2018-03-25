@@ -1,11 +1,15 @@
 import logging
 import sys
-
+from logging import getLogger
 
 
 class LogWrapper():
 	
 	loggers = {}
+	
+	@classmethod
+	def getDefaultLogger(cls):
+		return LogWrapper.getLogger()
 	
 	@classmethod
 	def getLogger(cls, name='root',filename=None, level=logging.DEBUG, override =  False):
@@ -56,7 +60,9 @@ class LogWrapper():
 		self.logger.log(sep.join("{}".format(a) for a in args))
 
 
-
+'''
+TEST
+'''
 if __name__ == "__main__":
 	g= LogWrapper.getLogger()
 	g.info('hello!!!')

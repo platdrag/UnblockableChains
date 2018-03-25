@@ -1,4 +1,4 @@
-opMode: 'testRinkeby' #'privateNet','testRinkeby','mainNet',
+opMode: 'privateNet' #'privateNet','testRinkeby','mainNet',
 nodeRpcUrl : 'http://localhost:8546'
 
 solc: 'bin\solc' # for windows path is filename withot .exe
@@ -80,16 +80,15 @@ testRinkeby:
   '--ethstats','unstoppable:Respect my authoritah!@stats.rinkeby.io',
   '--bootnodes','enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@52.169.42.101:30303']
 
-#If empty will be prompted for password each time.
+#If empty, you will be prompted for your password each time.
 #WARNINIG: IF USING mainNet CHOOSE A HARD PASSWORD OR LEAVE EMPTY TO BE ASKED EVERY TIME!!!
-#WALLETS WITH EASY PASSWORD ARE EASLY DRAINED ON MAINNET!!!
-ownerWalletPassword : 'aNS4xypxKzl6OS9cgOx0'
+#CAREFUL: WALLETS WITH EASY PASSWORDS ARE EASILY DRAINED ON MAINNET!!!
+ownerWalletPassword: '12345'
 
-#If empty a new account will be generated and written to .GEN conf file. Delete AUTO to regenerate
+#If empty, a new account will be generated and written to .OVERWRITE conf file. Delete it to regenerate
 ownerWallet:
 
-#Address of the deployed contract. if empty a new contract will be deployed and the address will
-#be written to .OVERRIDE file.
+#Address of the deployed contract. if empty a new contract will be deployed and the address will be written to .OVERWRITE file.
 contractAddress:
 
 

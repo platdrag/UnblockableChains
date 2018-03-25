@@ -66,3 +66,12 @@ Nothing interesting yet...
 - wait for the clients to register
 - add/rm clients from index
 - run shell commands on index-included clients 
+
+
+# Todos
+- Implement public key encryption
+- Split fund to generated implant to a small fee up front that will suffice only registration and then transfer the rest after registration.
+- Support multiple contract addresses
+- Support placing command/result data to Swarm, only put hash on blockchain. 
+- Allow Transfer messages using whisper
+- Allow controller the return funds from a compromised implant account.
