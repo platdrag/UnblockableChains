@@ -13,6 +13,7 @@ This is a POC fully functional C&C infrastructure on top of the public Ethereum 
 [For more details see the research paper on our wiki (TBA)](https://github.com/platdrag/UnblockableChains.wiki.git)
 
 Demo:
+
 [![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://www.youtube.com/watch?v=82BalW09F54)
 
 Contract is written in solidity, controller and implant code in python (using web3.py)
@@ -36,8 +37,7 @@ This project was created for Educational and Research purposes only. It only pur
 - Industry grade Encrpytion
 - MachineId code
 
-#
-#
+
 # Installation
 This project is purposed to run on linux and Windows 10 (with linux subsystem installed) only.
 
