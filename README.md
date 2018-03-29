@@ -51,20 +51,9 @@ Linux: `venv\Scripts\activate`
 ### Dependencies
 - see requirements.txt
 
-# Usage - Windows
-
-`set PYTHONPATH=.\src`
-`python src\Server\DeployUnstoppableCnC.py .`
-
-Runs the deployment script to initiate the controller backend. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI.
-
-`python -i src\Server\ServerCommands.py  .`
-`python >> clientAddress, clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)`
-
-
-# Usage - Command line (Linux)
-Note: For windows just replace / with \ in paths
-
+# Usage 
+Following instruction are for linux. For windows just replace / with \ in paths
+### Using the CLI
 Edit the deployment script (optional) at `conf/deployment/DeploymentConf.BASE.yaml`
 
 Run the server bootstrap script. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI. Optional:
@@ -96,7 +85,7 @@ Once client has registered, back on the server side use interactive shell to add
 ... confirmed match between instance issued command and result: ['echo awesome', 'awsome']
 ```
 
-### Usage - web UI
+### Using the web UI
 Run the deployment script as described above
 Create `static/`, `templates` dir symlinks:
 
@@ -119,8 +108,6 @@ Wait for the clients to register
 Add/rm clients from index
 
 Run shell commands on index-included clients 
-
-
 
 # Todos (Future work)
 - Implement public key encryption
