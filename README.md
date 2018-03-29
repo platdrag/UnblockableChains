@@ -86,7 +86,8 @@ Transfer the implant to destination machine and run it:
 
 `export PYTHONPATH=./src && python3 -i ./src/Client/ClientCommands.py . ./conf/clientConf.yaml`
 
-Client will run its own node, contact the contract and register with it.If successful, it will start a listener for incoming commands.
+Client will run its own node, contact the contract and register with it. If successful, it will start a listener for incoming commands.
+
 Once client has registered, back on the server side use interactive shell to add work to the client:
 
 ``` 
@@ -108,11 +109,17 @@ Run the webapp:
 `python3 src-webapp/ecnc-webapp.py`
 
 Access `http://127.0.0.1:5000/`
+
 Generate one or more implants
+
 Run client nodes as described above
+
 Wait for the clients to register
+
 Add/rm clients from index
+
 Run shell commands on index-included clients 
+
 
 
 # Todos (Future work)
