@@ -42,17 +42,23 @@ This project was created for Educational and Research purposes only. Its only pu
 Runs on linux or Windows 10 (with linux subsystem installed) only.
 
 `git clone https://github.com/platdrag/UnblockableChains`
+
 `cd UnblockableChains`
+
 `python3 -m venv .\venv`
+
 Windows: `venv\Scripts\activate.bat`
+
 Linux: `venv\Scripts\activate`
+
 `pip install -r requirements.txt`
+
 
 ### Dependencies
 - see requirements.txt
 
 # Usage 
-Following instruction are for linux. For windows just replace / with \ in paths
+Following instruction are for **linux**. For Windows just replace / with \ in paths
 ### Using the CLI
 Edit the deployment script (optional) at `conf/deployment/DeploymentConf.BASE.yaml`
 
