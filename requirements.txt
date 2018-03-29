@@ -1,0 +1,14 @@
+Flask_Sockets
+py_solc
+Flask
+pbkdf2
+bitcoin
+Werkzeug
+gevent
+urllib3
+web3
+rlp
+pycryptodome
+gevent_websocket
+typing
+PyYAML
