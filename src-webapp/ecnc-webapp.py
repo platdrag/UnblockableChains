@@ -38,19 +38,22 @@ class ServerCommandsWSExt(ecnc_s.ServerCommands):
 		for ws_app in self.ws_app_set:
 			ws_app.on_c_reg(c_addr, session_id)
 
-	def cmdArrival(self, c_addr, cmd_id, cmd_result):
-		super().cmdArrival(c_addr, cmd_id, cmd_result)
+	def cmdArrival(self, c_addr, cmd_id, cmd):
+		super().cmdArrival(c_addr, cmd_id, cmd)
 		for ws_app in self.ws_app_set:
-			ws_app.on_cmd_rx(c_addr, cmd_id)
+			ws_app.ws_cmd_updade(c_addr, cmd_id, cmd)
 
 	def reg(self, ws_app):
 		log.info('sc-ext: app registered: ws-addr: ...')
 		self.ws_app_set.append(ws_app)
 
+	def unreg(self, ws_app):
+		log.info('sc-ext: app exit: ws-addr: ...')
+		self.ws_app_set.pop(ws_app)
 
 class ECnCWSApp(WebSocketApplication):
 	"""
-	ecnc websocket app
+	ecnc websocket webapp
 	"""
 
 	def __init__(self, sc, c_map_by_addr, ws):
@@ -74,20 +77,29 @@ class ECnCWSApp(WebSocketApplication):
 		log.info("ws: connection open, sending client map")
 
 		self.ws_write('s.hello', None)
+
+		# send client list
 		for c_addr, c in self.c_map_by_addr.items():
-			if 'cmdId' == c_addr: # skip cmdId key which does not represent a real client
+			if 'cmdId' == c_addr:  # skip cmdId key which does not represent a real client
 				continue
 			self.ws_write('s.client-update', c)
+
+		# for each client send cmd list
+		for c_addr, c in self.c_map_by_addr.items():
+			if 'cmdId' == c_addr:  # skip cmdId key which does not represent a real client
+				continue
+			for cmd_id, cmd in c['commands'].items():
+				self.ws_cmd_updade(c_addr, cmd_id, cmd)
 
 	def on_c_reg(self, c_addr, session_id):
 		c = self.c_map_by_addr[c_addr]
 		c['status'] = 'registered'
 		self.ws_write('s.client-update', c)
 
-	def on_cmd_rx(self, c_addr, cmd_id):
-		cmd = self.c_map_by_addr[c_addr]['commands'][cmd_id]
-		cmd_set = [cmd]
-		payload = { 'cmd_set': cmd_set}
+	def ws_cmd_updade(self, c_addr, cmd_id, cmd):
+		cmd_json = cmd.copy()
+		cmd_json['status'] = 'ok' if 0 == cmd_json['status'] else 'err'
+		payload = { 'cmd_set': [cmd_json]}
 		self.ws_write('c.cmd_update', payload)
 
 	def on_message(self, msg_r_raw):
@@ -145,7 +157,7 @@ class ECnCWSApp(WebSocketApplication):
 
 	def on_close(self, reason):
 		log.info("ws: connection close")
-
+		self.sc.unreg(self)
 #
 # Flask app init
 #
@@ -205,6 +217,7 @@ def close_database(exception):
 @app.route('/')
 def root():
 	return app.send_static_file('index.html')
+
 
 @app.route('/status')
 def status():
