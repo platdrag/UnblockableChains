@@ -292,6 +292,9 @@ class ServerCommands:
 			l.error("Got a request to transfer funds to an instance that is not on the instance list!!! refusing of course... :",instanceAddress)
 			return False
 
+	def utilStrTimestamp(self):
+		return datetime.now().strftime("%H:%M:%S")
+
 	def startInstanceRegistrationRequestWatcher(self):
 			try:
 				l.info('Starting to watch for new instance registrations...')
