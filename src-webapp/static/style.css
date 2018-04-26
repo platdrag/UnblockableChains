@@ -25,6 +25,13 @@ button:hover {
    background-color: gold;
 }
 
+.body_wrapper {
+   display: flex;
+   flex-direction: column;
+   flex-grow: 1;
+   height: 100%;
+}
+
 .btn_c-index-include:hover {
    background-color: gold;
 }
@@ -38,7 +45,7 @@ button:hover {
 }
 
 .c_status__registered {
-   background-color: #d2ffff;
+   background-color: lightgreen;
 }
 
 .panel {
@@ -48,14 +55,29 @@ button:hover {
 }
 
 .header {
+   display: flex;
    background-color: black;
    color: white;
-   font-size: 1.2em;
-   padding: 10px;
+   padding: 30px;
+   justify-content: space-between;
+   align-items: flex-end;
+}
+
+.header_l0 {
+   font-size: 2em;
+   margin-bottom: 10px;
+}
+
+.header_l1 {
+   font-size: 0.9em;
+}
+
+.header_right {
+   font-size: 0.9em;
+   color: greenyellow;
 }
 
 .panel-header {
-   flex-basis: 10%;
    background-color: grey;
    color: white;
    padding: 10px;
@@ -65,15 +87,52 @@ button:hover {
 .panel-body {
    display: flex;
    flex-direction: column;
+   flex-grow: 1;
    min-height: 120px;
+   height: 100%; /* rm if possible */
 }
 
 .p_top {
    padding: 10px;
 }
 
-.p_server-status .panel-body {
-   padding: 10px;
+.p_status {
+   flex-basis: 20%;
+}
+
+.p_status_sect-label {
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   font-family: monospace;
+   align-items: center;
+   flex-basis: 10%;
+   margin-right: 10px;
+   flex-shrink: 0;
+}
+
+.p_status_sect-label-server {
+   background-color: #99e2ff;
+}
+
+.p_status_sect-label-client {
+   background-color: lightgrey;
+}
+
+.p_status__client {
+   display: flex;
+   flex-basis: 70%;
+}
+
+.client-set {
+   display: flex;
+   flex-direction: column;
+   flex-grow: 1;
+}
+
+.p_status__server {
+   display: flex;
+   flex-basis: 40%;
 }
 
 .tool-section {
@@ -95,7 +154,16 @@ button:hover {
 }
 
 .panel_output {
-   
+   flex-grow: 1;
+}
+
+.panel_console {
+   flex-basis: 20%;
+}
+
+.panel_console_body {
+   padding-left: 10px;
+   overflow-y: scroll;
 }
 
 .client-row {
@@ -103,25 +171,45 @@ button:hover {
    font-family: monospace;
    justify-content: space-between;
    padding-left: 10px;
-   background-color: #e1e1e1;
    line-height: 30px;
-   margin-bottom: 3px;
+}
+
+.client-row:nth-of-type(even) {
+   background-color: #e1e1e1;
+}
+
+.client-row:nth-of-type(odd) {
+   background-color: #c1c1c1;
 }
 
 .client-row:hover {
-   background-color: #c1c1c1;
+   /*   background-color: #c1c1c1; */
 }
 
 .client-selected {
    background-color: gold;
 }
 
+.cmd-item-wrapper {
+   display: flex;
+   flex-direction: column;
+}
+
 .cmd-row {
    display: flex;
+   justify-content: space-between;
    font-family: monospace;
    paddi ng: 3px;
    padding-left: 10px;
    line-height: 30px;
+}
+
+.cmd-row-expand {
+   display: flex;
+   flex-direction: column;
+   padding: 10px;
+   font-family: monospace;
+   background-color: #fdf2b6;
 }
 
 .cmd-row_shell-cmd {
@@ -132,11 +220,29 @@ button:hover {
    color: red;
 }
 
+.cmd_status__ok {
+   background-color: greenyellow;
+}
+
+.cmd_status__err {
+   background-color: red;
+}
+
+.cmd_status__pending {
+   background-color: yellow;
+}
+
 .in_client-cmd {
    padding: 5px;
-   background-color: #c9ff9a;
+   background-color: aliceblue;
    font-size: 1.2em;
    height: 25px;
    width: 48ch;
    font-family: monospace;
+}
+
+.log-line {
+   font-family: monospace;
+   line-height: 30px;
+   white-space: nowrap;
 }

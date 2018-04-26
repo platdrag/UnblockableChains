@@ -14,31 +14,46 @@
 <body>
   <div class="body_wrapper">
 
-    <div class="header">E-CNC</div>
+    <div class="header">
+      <div class="header_left">
+        <div class="header_l0">E-CNC</div>
+        <div class="header_l1">unstoppable ethereum based botnet</div>
+      </div>
+      <div class="header_right">by: platdrag, LV-426</div>
+    </div>
     <div class="panel p_top">
       <div class="panel-body">
         <pre>time: {{ time }}</pre>
       </div>
     </div>
 
-    <div class="panel p_server-status">
-      <div class="panel-header">Server status</div>
+    <div class="panel p_status">
+      <div class="panel-header">Status</div>
       <div class="panel-body">
-        <pre>{{ server_status }}</pre>
-      </div>
-    </div>
-
-    <div class="panel p_client-index">
-      <div class="panel-header">Client list</div>
-      <div class="panel-body">
-        <div class="client-row" v-for="(client, c_addr) in c_map">
-          <div>c-addr: {{ client.addr }}</div>
-          <div :class="'c_status__' + client.status">status: {{ client.status }}</div>
-          <div>balance: n/a</div>
-          <div>page-link: <a :href="'/client/' + client.addr">{{ client.addr }}</a></div>
-          <div class="btn_c-index-include c-in-index" v-if="c_addr in c_index"
-            v-on:click="c_index_update(client, false)">in-index: [x]</div>
-          <div class="btn_c-index-include" v-else v-on:click="c_index_update(client, true)">in-index: [ ]</div>
+        <div class="p_status__server">
+          <div class="p_status_sect-label p_status_sect-label-server">Server</div>
+          <div>
+            <pre>{{ server_status }}</pre>
+          </div>
+        </div>
+        <div class="p_status__client">
+          <div class="p_status_sect-label p_status_sect-label-client">Clients</div>
+          <div class="client-set">
+            <div class="client-row" v-for="(client, c_addr) in c_map">
+              <div style="flex-basis: 32ch">{{ client.addr }}</div>
+              <div style="flex-basis: 24ch" :class="'c_status__' + client.status">&nbsp;status: {{ client.status
+                }}</div>
+              <div>balance: n/a</div>
+              <!-- 
+            <div>
+              page-link: <a :href="'/client/' + client.addr">{{ client.addr }}</a>
+            </div>
+             -->
+              <div class="btn_c-index-include c-in-index" v-if="c_addr in c_index"
+                v-on:click="c_index_update(client, false)">in-index: [x]</div>
+              <div class="btn_c-index-include" v-else v-on:click="c_index_update(client, true)">in-index: [ ]</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -49,21 +64,25 @@
 
         <!-- tool section: server -->
         <div class="tool-section tool-section_s">
-          <button v-on:click="btn_ws_s_gen_client_kit">s.gen-client-kit</button>
-          <!--
+          <div>
+            <button v-on:click="btn_ws_s_gen_client_kit" title="generate new client kit">gen-client-kit</button>
+            <!--
           <button v-on:click="btn_ws_s_new_client">s.client-reg-rx</button>
             -->
-          <button v-on:click="btn_shutdown">s.shutdown</button>
+            <button v-on:click="btn_shutdown">shutdown server</button>
+          </div>
         </div>
 
         <!-- tool section: client -->
         <div class="tool-section tool-section_c">
-          <input class="in_client-cmd" v-model="in_client_shell_cmd" type="text"
-            placeholder="shell command - sent to all index clients">
-          <button v-on:click="btn_ws_c_work_tx">c.work-tx</button>
-          <!--  
+          <div>
+            <input class="in_client-cmd" v-model="in_client_shell_cmd" type="text"
+              placeholder="exec shell command, sent to all indexed clients">
+            <button v-on:click="btn_ws_c_work_tx">exec</button>
+            <!--  
           <button v-on:click="btn_ws_c_work_rx">c.work-rx</button>
           -->
+          </div>
         </div>
       </div>
     </div>
@@ -71,20 +90,34 @@
     <div class="panel panel_output">
       <div class="panel-header">Command list</div>
       <div class="panel-body">
-        <div class="cmd-row" v-for="(cmd, cmd_id) in cmd_map" v-bind:cmd="cmd" v-bind:key="cmd_id">
-          <div style="flex-basis: 60ch">c-addr: {{cmd.c_addr}}</div>
-          <div style="flex-basis: 24ch">cmd-id: {{cmd_id}}</div>
-          <div style="flex-basis: 16ch">status: {{cmd.status}}</div>
-          <div style="flex-basis: 42ch">[tx,rx,dt]: [{{cmd.ts_tx}}, {{cmd.ts_rx}}, {{cmd.exec_dt}}]</div>
-          <div style="flex-basis: 16ch">
-            cmd: <span class="cmd-row_shell-cmd">{{cmd.cmd}}</span>
+        <div class="cmd-item-wrapper" v-for="(cmd, cmd_id) in cmd_map" v-bind:cmd="cmd" v-bind:key="cmd_id">
+          <div class="cmd-row" v-on:click="cmd_panel_toggle(cmd)">
+            <div style="flex-basis: 52ch">c-addr: {{cmd.c_addr}}</div>
+            <div style="flex-basis: 12ch">cmd-id: {{cmd_id}}</div>
+            <div style="flex-basis: 16ch" :class="'cmd_status__' + cmd.status">&nbsp;status: {{cmd.status}}</div>
+            <div style="flex-basis: 48ch">
+              shell-cmd: <span class="cmd-row_shell-cmd">{{cmd.cmd}}</span>
+            </div>
           </div>
-          <div style="flex-grow: 1">
-            output: <span class="cmd-row_output">{{cmd.output}}</span>
+          <div class="cmd-row-expand" v-if="cmd.ui_cmd_panel_expanded">
+            <div>cmd tx: {{cmd.ts_tx}}</div>
+            <div>cmd rx: {{cmd.ts_rx}}</div>
+            <div>roundtrip time: {{cmd.t_roundtrip}}</div>
+            <div style="flex-grow: 1">
+              output: <span class="cmd-row_output"><pre>{{cmd.output}}</pre></span>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <div class="panel panel_console">
+      <div class="panel-header">Console</div>
+      <div class="panel-body panel_console_body">
+        <div class="log-line" v-for="line in console_log.slice().reverse()">{{line}}</div>
+      </div>
+    </div>
+
   </div>
 
   <script type="text/javascript" src="/static/ecnc-app.js"></script>

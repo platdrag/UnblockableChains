@@ -4,10 +4,11 @@
 var app = new Vue({
    el : '.body_wrapper',
    data : { 
-     c_map: {}, // {'a': {'addr': 0}},
+     c_map: {},
      cmd_map: {},
      c_index: {},
      time: '',
+     console_log: [],
      server_status: '',
      in_client_shell_cmd: '',
    },
@@ -22,7 +23,8 @@ var app = new Vue({
            var time = new Date(msg.date);
            var timeStr = time.toLocaleTimeString();
 
-           new_client_ph_id = '__new-client-placeholder-id__' // new client tmp id hack
+           new_client_ph_id = '__new-client-placeholder-id__' // new client tmp
+                                                               // id hack
 
            switch(msg.msg_type) {
 
@@ -35,29 +37,31 @@ var app = new Vue({
 
                if(new_client_ph_id == client.addr && 'kit-generation-end' == client.status){
                   Vue.delete(app.c_map, new_client_ph_id);
+                  app.log_info('client kit generated')
                   break;
                }
 
                if ('registered' == client.status){
                   app.c_index_update(client, true);
+                  app.log_info('client registered: c_addr: ' + client.addr)
                }
 
                Vue.set(app.c_map, client.addr, client);
-               console.log('rx: new-client: ' + client.addr)
                break;
 
              case 'c.cmd_update':
                cmd_set = msg.payload.cmd_set
                cmd_set.map(cmd => {
+                  cmd.ui_cmd_panel_expanded = false;
                   Vue.set(app.cmd_map, cmd.id, cmd);
                });
-               console.log('c.work-tx: ' + JSON.stringify(cmd_set))
+               app.log_info('c.cmd-update: ' + JSON.stringify(cmd_set))
                break;
 
              case 'c.work-rx':
                cmd = msg.payload
                Vue.set(app.cmd_map, cmd.id, cmd)
-               console.log('c.work-rx: ' + JSON.stringify(cmd))
+               app.log_info('c.work-rx: ' + JSON.stringify(cmd))
                break;
            }
        };
@@ -78,9 +82,18 @@ var app = new Vue({
       e => { this.server_status = 'n/a' });
       }.bind(this), 3000);
 
+      this.log_info('welcome to ecnc');
    },
 
    methods : {
+
+      log_info: function(msg){
+         console.info(msg);
+         var d_now  = new Date();
+         var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+         var ts_prefix = d_now.toLocaleTimeString(options);
+         this.console_log.push('[' + ts_prefix + '] '+ msg);
+      },
 
       c_index_update: function(client, include, event) {
           if (include){
@@ -132,8 +145,11 @@ var app = new Vue({
           this.$ws.send(JSON.stringify(msg));
       },
 
+      cmd_panel_toggle: function(cmd) {
+         cmd.ui_cmd_panel_expanded = !cmd.ui_cmd_panel_expanded;
+      },
+
    },
 
 });
 
-console.log('ecnc-ui client initialized')
