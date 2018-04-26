@@ -169,9 +169,9 @@ class ServerCommands:
 			pass
 		return msg
 
-	def addWork (self, instanceAddress, command):
+	def addWork(self, instanceAddress, command):
 		'''
-		Issue a command for an implant address
+		Issue command for an implant address
 		:param instanceAddress:
 		:param command:
 		:return:
@@ -184,10 +184,20 @@ class ServerCommands:
 			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:', txhash)
 			self.transactionCostLogger.insert(txhash, 'addWork',len(command))
 			
-			self.instances[instanceAddress]['commands'][self.instances['cmdId']] = [command, None]
+			cmdId = self.instances['cmdId']
+			cmdHandle = {'cmd': command,
+						 'status': 'pending',
+						 'id': cmdId,
+						 'ts_tx': self.utilStrTimestamp(), # mark tx timestamp
+						 'ts_rx': None,
+						 't_roundtrip': None,
+						 'output': None,
+						 'c_addr': instanceAddress}
+
+			self.instances[instanceAddress]['commands'][cmdId] = cmdHandle # , None]
 			self.instances['cmdId'] += 1
 			self.instances.sync()
-			return True
+			return cmdHandle
 		return False
 
 	def removeInstance (self, instanceAddress):
