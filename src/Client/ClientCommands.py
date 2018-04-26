@@ -186,38 +186,37 @@ class ClientCommands:
 				time.sleep(sleep)
 				sleep *= 2
 
-		if self.registered():
-			try:
-				l.info('instance is now registered with server. waiting for work...')
-				self.commandFilter, eventABI = createLogEventFilter(COMMAND_PENDING_EVENT_NAME,
-									 self.contractAbi,
-									 self.contractAddress,
-									 self.web3,
-									 topicFilters = [self.web3.sha3(self.address)])
-				
-				def onCommandArrival(tx):
-					try:
-						l.debug('new command event:',tx)
+		try:
+			l.info('instance is now registered with server. waiting for work...')
+			self.commandFilter, eventABI = createLogEventFilter(COMMAND_PENDING_EVENT_NAME,
+								 self.contractAbi,
+								 self.contractAddress,
+								 self.web3,
+								 topicFilters = [self.web3.sha3(self.address)])
+			
+			def onCommandArrival(tx):
+				try:
+					l.debug('new command event:',tx)
 
-						command = getLogEventArg(tx, eventABI,'command')
-						cmdId = getLogEventArg(tx, eventABI, 'cmdId')
+					command = getLogEventArg(tx, eventABI,'command')
+					cmdId = getLogEventArg(tx, eventABI, 'cmdId')
 
-						commandDec = self.decryptMessageFromServer(command)
-						l.info('Decrypted a new command from server. id:',cmdId,'cmd:',commandDec)
+					commandDec = self.decryptMessageFromServer(command)
+					l.info('Decrypted a new command from server. id:',cmdId,'cmd:',commandDec)
 
-						workResults = self.doWork(commandDec)
-						l.info('Command',cmdId, 'execution complete:', workResults[0:100],'...')
+					workResults = self.doWork(commandDec)
+					l.info('Command',cmdId, 'execution complete:', workResults[0:100],'...')
 
-						workResultsEnc = self.encryptMessageForServer(workResults)
-						self.uploadWorkResults(cmdId, workResultsEnc)
-					except Exception as e:
-						l.error("Error responding to command request:", e)
-				self.commandFilter.watch(onCommandArrival)
-				
-			except Exception as e:
-				l.error("Error in event watcher registration:", e)
-				if self.commandFilter and self.commandFilter.running:
-					self.commandFilter.stopWatching()
+					workResultsEnc = self.encryptMessageForServer(workResults)
+					self.uploadWorkResults(cmdId, workResultsEnc)
+				except Exception as e:
+					l.error("Error responding to command request:", e)
+			self.commandFilter.watch(onCommandArrival)
+			
+		except Exception as e:
+			l.error("Error in event watcher registration:", e)
+			if self.commandFilter and self.commandFilter.running:
+				self.commandFilter.stopWatching()
 
 	def runGethNode(self, conf):
 		'''
