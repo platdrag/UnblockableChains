@@ -200,6 +200,9 @@ class ServerCommands:
 			return cmdHandle
 		return False
 
+	def cmdArrival(self, c_addr, cmd_id, cmd): # subclass hook
+		cmd['ts_rx'] = self.utilStrTimestamp() # mark rx timestamp
+
 	def removeInstance (self, instanceAddress):
 		'''
 		Disallow an instance address from the network
@@ -360,6 +363,8 @@ class ServerCommands:
 								cmdResParsed = json.loads(commandResult)
 								cmd['status'] = cmdResParsed['status']
 								cmd['output'] = cmdResParsed['output']
+								
+								self.cmdArrival(instanceAddress, cmdId, cmd)
 								
 								self.instances.sync()
 								l.info ('Confirmed match between instance issued command and result:',str(self.instances[instanceAddress]['commands'][cmdId])[0:200])
