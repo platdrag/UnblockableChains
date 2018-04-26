@@ -355,7 +355,12 @@ class ServerCommands:
 						if instanceAddress in self.instances:
 							l.info('got new Commandresult for cmdId:',cmdId,"from:", instanceAddress, 'sessionAndMachineIdHash:', sessionAndMachineIdHash)
 							if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
-								self.instances[instanceAddress]['commands'][cmdId][1] = commandResult
+								cmd = self.instances[instanceAddress]['commands'][cmdId]
+								
+								cmdResParsed = json.loads(commandResult)
+								cmd['status'] = cmdResParsed['status']
+								cmd['output'] = cmdResParsed['output']
+								
 								self.instances.sync()
 								l.info ('Confirmed match between instance issued command and result:',str(self.instances[instanceAddress]['commands'][cmdId])[0:200])
 							else:
