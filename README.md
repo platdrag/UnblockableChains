@@ -53,6 +53,7 @@ Linux: `venv\Scripts\activate`
 
 `pip install -r requirements.txt`
 
+* Windows: visual studio build tools might be needed
 
 ### Dependencies
 - see requirements.txt
