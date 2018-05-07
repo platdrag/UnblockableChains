@@ -7,7 +7,7 @@ Werkzeug
 gevent
 urllib3
 web3
-rlp
+rlp==0.6
 pycryptodome
 gevent_websocket
 typing
