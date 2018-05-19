@@ -53,6 +53,9 @@ contract UnstoppableCnC {
         require (instances[instanceHash].state == state);
         _;
     }
+	
+	
+
 
     /*
         Initial Registration request by the client. Sends its unique machine Id hash to be bound to this account.
@@ -146,4 +149,6 @@ contract UnstoppableCnC {
         return true;
     }
 
+	
+	
 }

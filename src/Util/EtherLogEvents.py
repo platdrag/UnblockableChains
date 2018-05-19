@@ -1,9 +1,8 @@
 from web3.utils.events import get_event_data
 from web3.utils.abi import filter_by_name,abi_to_signature
 from web3.utils.filters import  LogFilter
-from .WalletOperations import encode_hex
+from .SolidityTypeConversions import bytes2Hex
 from .LogWrapper import LogWrapper
-from .PollerQueue import PollerQueue
 import time
 
 l = LogWrapper.getDefaultLogger()
@@ -11,7 +10,7 @@ l = LogWrapper.getDefaultLogger()
 def createLogEventFilter(eventName, contractAbi, fromAddress, web3, topicFilters:[]) -> (LogFilter, str):
 	eventABI = filter_by_name(eventName, contractAbi)[0]
 	eventSignature = abi_to_signature(eventABI)
-	eventHash = web3.sha3(encode_hex(eventSignature))
+	eventHash = bytes2Hex(web3.sha3(text = eventSignature))
 	l.debug('creating log filter. eventSignature:', eventSignature, 'eventHash:', eventHash, 'filters:',topicFilters)
 
 	commandFilter = web3.eth.filter({'address': fromAddress,

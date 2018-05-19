@@ -1,3 +1,3 @@
 
 def fingerprintMachine():
-	return 'aabbcc' #TODO: complete
+	return 'aabbcc' #TODO: it is left to the reader to properly fingerprint the device...

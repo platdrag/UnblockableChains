@@ -1,8 +1,8 @@
-opMode: 'privateNet' #'privateNet','testRinkeby','mainNet',
+opMode: 'privateNet'    #'privateNet','testRinkeby','mainNet',
 nodeRpcUrl : 'http://localhost:8546'
 
-solc: 'bin\solc' # for windows path is filename withot .exe
-geth: &gethbin 'bin\geth' # for windows path is filename withot .exe
+solc: 'bin\solc'    # for windows path is filename without .exe
+geth: &gethbin 'bin\geth'    # for windows path is filename without .exe
 keyGenScript: 'bin\genpriv.sh'
 
 #interfaceDir : 'interface'
@@ -22,7 +22,7 @@ allowedAddresses: []
 privateNet:
   BlockChainData: 'build\privateServer'
   genesisFile: 'build\genesis.json'
-#"byzantiumBlock": 12
+  #"byzantiumBlock": 12
   genesis:
     alloc: {}
     coinbase: ''
@@ -44,8 +44,10 @@ privateNet:
     '--port', '30303',
     '--etherbase', '%OWNERADDRESS%', '--nodiscover',
     #  '--lightserv','25',
-#    '--ipcdisable',
-    '--mine', '--minerthreads', '4', '--verbosity', '4' ]
+    # '--ipcdisable',
+    '--vmdebug',
+    '--debug',
+    '--mine', '--minerthreads', '4', '--verbosity', '5' ]
 
 mainNet:
   BlockChainData: 'build\Server-full'

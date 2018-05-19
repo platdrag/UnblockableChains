@@ -34,7 +34,7 @@ This project was created for Educational and Research purposes only. Its only pu
 
 ### What is not included (yes, on purpose)
 - Implant packaging, obfuscating and delivery
-- Industry grade Encrpytion
+- Industry grade Encryption
 - MachineId code
 
 

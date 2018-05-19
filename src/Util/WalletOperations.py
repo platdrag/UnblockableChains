@@ -1,9 +1,10 @@
 import ast, getpass
 import os, string, random
 from .Process import Win2LinuxPathConversion,runCommand, format_error_message
-from .EtherKeyUtils import make_keystore_json, encode_hex, pubtoaddr, privtopub, privtoaddr, decode_keystore_json
+from .EtherKeyUtils import make_keystore_json, pubtoaddr, privtopub, privtoaddr, decode_keystore_json
 from .LogWrapper import LogWrapper
-
+from eth_utils import to_checksum_address
+from .SolidityTypeConversions import bytes2Hex
 l = LogWrapper.getDefaultLogger()
 
 def generateKeyPair (keyGenScript) -> (str,str):
@@ -50,16 +51,17 @@ def generateWallet(keyGenScript, password = None):
 	password = passwordPrompt(password, "Choose account password. Please remember it as it won't be written anywhere!")
 
 	walletJson = str(make_keystore_json(private[2:].encode('utf-8'), password))
-	address =  '0x' + encode_hex(pubtoaddr(public[2:].encode('utf-8')))
-
+	address =  bytes2Hex(pubtoaddr(public[2:].encode('utf-8')))
+	address = to_checksum_address(address)
 	return walletJson, public, private, address
 
 def loadWallet(walletJson, password = None):
 	password = passwordPrompt(password)
 	private = decode_keystore_json(ast.literal_eval(walletJson), password)
 
-	public = '0x' + encode_hex(privtopub(private))
-	address = '0x' + encode_hex(privtoaddr(private))
+	public = bytes2Hex(privtopub(private))
+	address = bytes2Hex(privtoaddr(private))
+	address = to_checksum_address(address)
 	private = '0x' + bytes.decode(private, 'utf-8')
 
 	return public, private, address
@@ -79,7 +81,10 @@ def importAccountToNode(web3, currentAddress, private, password):
 		password = passwordPrompt ()
 	if not currentAddress in web3.personal.listAccounts:
 		address = web3.personal.importRawKey(private, password)
-		assert(address == currentAddress)
+		assert (address == currentAddress)
 		l.info('Account', currentAddress, 'imported to local node')
 	l.info('Account Balance: ',str(getAccountBalance(web3, currentAddress)))
 	unlockAccount(currentAddress,password, web3)
+
+
+

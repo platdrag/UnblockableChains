@@ -1,6 +1,6 @@
 from .LogWrapper import LogWrapper
 from .PollerQueue import PollerQueue
-
+from .SolidityTypeConversions import  bytes2Hex
 '''
 Util class to log transaction and their cost in a readable csv format
 '''
@@ -16,7 +16,7 @@ class TransactionLogger ():
 			trans = web3.eth.getTransaction(txhash)
 			to = receipt['to'] if receipt['to'] else receipt['contractAddress']
 			# txHash, block Number, from, to, transaction name, gas Limit, gas Used, gas Price, total cost, data size
-			logger.info(txhash, receipt['blockNumber'], receipt['from'], to, transName, trans['gas'],
+			logger.info(bytes2Hex(txhash), receipt['blockNumber'], receipt['from'], to, transName, trans['gas'],
 			            receipt['gasUsed'],
 			            trans['gasPrice'], web3.fromWei(receipt['gasUsed'] * trans['gasPrice'], 'ether'), dataLength,
 			            sep='\t')

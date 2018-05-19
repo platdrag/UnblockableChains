@@ -62,14 +62,15 @@ def deployContract (web3, conf, contractAddress = None):
 		transactionCostLogger.insert(tx_hash,'deployContract_'+conf['contractName'],len(compiled_sol))
 	else:
 		l.info('contract successfully loaded: ', contractAddress)
+
 	l.debug(' abi:', contract_interface['abi'])
 	
 	conf['abi'] = contract_interface['abi']
 	
 	# Contract instance in concise mode
-	contract_instance = web3.eth.contract(contract_interface['abi'], contractAddress,
+	contract_instance = web3.eth.contract(contractAddress,
+										  abi = contract_interface['abi'],
 										  ContractFactoryClass=ConciseContract)
-	#contract_instance.owner()
 	return contract_instance
 
 
@@ -168,7 +169,8 @@ def loadOrGenerateAccount(conf, regenerateOwnerAccount = False) -> bool:
 	ownerChanged = False
 	if not conf['ownerWallet'] or regenerateOwnerAccount:
 		l.info("No account set. Generating a new account")
-		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] = generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
+		conf['ownerWallet'],conf['ownerPublic'],conf['ownerPrivate'],conf['ownerAddress'] = \
+			generateWallet(conf['keyGenScript'], conf['ownerWalletPassword'])
 
 		l.info('Generated new owner wallet. Persisting changes to conf file')
 		modifyConfigFile(OVERWRITE_DEPLOYMENT_FILE, 'ownerWallet', conf['ownerWallet'])

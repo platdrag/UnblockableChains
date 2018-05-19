@@ -1,7 +1,8 @@
 from web3 import Web3
+from .WalletOperations import encode_hex
 
-def bytesToHexString(string) -> str:
-	return Web3.toHex(string.encode('latin-1'))
+def bytes2Hex(string) -> str:
+	return '0x' + encode_hex(string)
 
 
 def hexStringToBytes(bytes) :
@@ -18,7 +19,3 @@ def padHexTo32B(hexStr:str, padBegining = True, prefix = '') -> str :
 		return prefix + pad + hexStr
 	else:
 		return prefix + hexStr + pad
-
-
-def sha3AsBytes(x:str) -> str:
-	return hexStringToBytes(Web3.sha3(x))
