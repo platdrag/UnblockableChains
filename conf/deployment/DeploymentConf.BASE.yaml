@@ -45,8 +45,8 @@ privateNet:
     '--etherbase', '%OWNERADDRESS%', '--nodiscover',
     #  '--lightserv','25',
     # '--ipcdisable',
-    '--vmdebug',
-    '--debug',
+    #'--vmdebug',
+    #'--debug',
     '--mine', '--minerthreads', '4', '--verbosity', '5' ]
 
 mainNet:
