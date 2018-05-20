@@ -1,5 +1,5 @@
 Flask_Sockets
-py_solc
+py-solc
 Flask
 pbkdf2
 bitcoin

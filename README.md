@@ -116,6 +116,28 @@ Add/rm clients from index
 
 Run shell commands on index-included clients 
 
+# Troubleshooting
+## handling 'insufficient funds for gas' during transactions
+- this may present itself in the following form:
+
+    File "/usr/local/lib/python3.6/dist-packages/web3/manager.py", line 106, in request_blocking
+      raise ValueError(response["error"])
+    ValueError: {'code': -32000, 'message': 'insufficient funds for gas * price + value'}
+
+- fix: make sure no previous instance of geth is running
+
+## handling web3 version incompatibilities
+- this may present itself in the following form:
+
+    Traceback (most recent call last):
+      File "src/Server/DeployUnstoppableCnC.py", line 310, in <module>
+        contract = deployContract (web3, conf, conf['contractAddress'])
+      File "src/Server/DeployUnstoppableCnC.py", line 71, in deployContract
+        ContractFactoryClass=ConciseContract)
+    TypeError: contract() takes from 1 to 2 positional arguments but 3 were given
+
+- fix: make sure you are using python web3 version 3.x
+
 # Todos (Future work)
 - Implement public key encryption
 - Split fund to generated implant to a small fee up front that will suffice only registration and then transfer the rest after registration.
