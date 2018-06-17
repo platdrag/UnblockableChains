@@ -11,12 +11,12 @@ By leveraging the blockchain as intermediate, the infrastructure is virtually un
 - Takeover resistant – No vulnerabilities or logic path that allows adversarial control of network. (V)
 - Low operational costs (X)
 
-Smart Contract is written in solidity, controller and implant code in python (using [![web3.py](https://github.com/ethereum/web3.py))
+Smart Contract is written in solidity, controller and implant code in python (using ![web3.py](https://github.com/ethereum/web3.py))
 
 
 Demo Video:
 
-[![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://www.youtube.com/watch?v=82BalW09F54)
+[![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://youtu.be/JLUM2BbzBqs)
 
 
 # Disclaimer
@@ -34,8 +34,8 @@ This project was created for Educational and Research purposes only. Its only pu
 - Fund transfers
 
 ### What is not included (yes, on purpose)
-- Implant packaging, obfuscating and delivery
-- Industry grade Encryption
+- Implant packaging, obfuscating and delivery methods
+- Industry grade public Encryption
 - MachineId code
 
 
@@ -72,18 +72,23 @@ Run the server in interactive mode & use the `sc` object to issue commands:
 
 `python3 -i src/Server/ServerCommands.py .`
 
-* Available commands: generateNewClientInstance, allowInstance, removeInstance, addWork, fundTransfer
+* Available commands: 
+-- generateNewClientInstance (clientConfTemplateFile, fundValue, clientNodeRpcPort)
+-- allowInstance (instanceAddress)
+-- removeInstance (instanceAddress)
+-- addWork (instanceAddress, command)
+-- fundTransfer (instanceAddress, fundValue)
 
 Generate a new bot client instance:
 
-`>>> sc.generateNewClientInstance(1000000000000000000,opj('conf','clientGen', 'ClientConf.TEMPLATE.yaml'), port=30304)`
+`>>> sc.generateNewClientInstance('conf/clientGen/ClientConf.TEMPLATE.yaml', 1000000000000000000, port=30304)`
 
 Note the generated wallet address. Implant will be placed under `./generated/<GeneratedWalletAddress>`
-Transfer the implant to destination machine and run it:
+Transfer the implant generated directory to destination machine and run it:
 
 `export PYTHONPATH=./src && python3 -i ./src/Client/ClientCommands.py . ./conf/clientConf.yaml`
 
-Client will run its own node, contact the contract and register with it. If successful, it will start a listener for incoming commands.
+Client will run its own node, sync in light mode, contact the contract and register with it. If successful, it will start a listener for incoming commands.
 
 Once client has registered, back on the server side use interactive shell to add work to the client:
 
@@ -102,8 +107,7 @@ Create `static/`, `templates` dir symlinks:
 
 Run the webapp:
 
-`export PYTHONPATH=src`
-`python3 src-webapp/ecnc-webapp.py`
+`export PYTHONPATH=src && python3 src-webapp/ecnc-webapp.py`
 
 Access `http://127.0.0.1:5000/`
 
