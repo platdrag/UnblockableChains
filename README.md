@@ -1,5 +1,6 @@
 # About
-This is a POC fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communication. By leveraging the blockchain as intermediate, the infrastructure is virtually unstoppable, dealing with most of the shortcoming of regular malicious infrastructures. Namely:
+UnblockableChains is a POC project of a fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communication. This project was developed as a research project to evaluate this communication channel in order to test its feasibility and wether or not it will be used in real malicious campaigns.
+By leveraging the blockchain as intermediate, the infrastructure is virtually unstoppable, dealing with most of the shortcoming of regular malicious infrastructures. Namely:
 - Secure communications – Immune to data modifications, eavesdropping, MITM, replay attacks (V)
 - High availability – node can always find the C&C (V)
 - Scalable – Can support any number of implants and any load of transactions. (VX)
@@ -10,16 +11,16 @@ This is a POC fully functional C&C infrastructure on top of the public Ethereum 
 - Takeover resistant – No vulnerabilities or logic path that allows adversarial control of network. (V)
 - Low operational costs (X)
 
-[For more details see the research paper on our wiki (TBA)](https://github.com/platdrag/UnblockableChains.wiki.git)
+Smart Contract is written in solidity, controller and implant code in python (using [![web3.py](https://github.com/ethereum/web3.py))
 
-Demo:
+
+Demo Video:
 
 [![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://www.youtube.com/watch?v=82BalW09F54)
 
-Contract is written in solidity, controller and implant code in python (using web3.py)
 
 # Disclaimer
-This project was created for Educational and Research purposes only. Its only purpose is to educate the security community of new and possibly emerging vector that attackers might use in the future. Illegal use of this and its variants or inclusion of it in illegal activities is not encouraged by its author (and was activly discouraged by removing some key components, see what is not included section).  
+This project was created for Educational and Research purposes only. Its only purpose is to educate the security community of new and possibly emerging vector that attackers might use in the future. Illegal use of this and its variants or inclusion of it in illegal activities is not encouraged by its author (and was activly discouraged by removing some key components, see what is not included section below).  
 
 # Features
 - Controller panel
