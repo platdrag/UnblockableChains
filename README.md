@@ -70,6 +70,7 @@ Edit the deployment script (optional):
 Run the server bootstrap script. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI. Optional:
 
 `export PYTHONPATH=./src && python3 src/Server/DeployUnstoppableCnC.py .`  (use -h for more options)
+
 Run the server in interactive mode & use the `sc` object to issue commands:
 
 `python3 -i src/Server/ServerCommands.py .`   (use -h for more options)
