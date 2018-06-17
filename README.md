@@ -1,5 +1,6 @@
 # About
-UnblockableChains is a POC project of a fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communication. This project was developed as a research project to evaluate this communication channel in order to test its feasibility and wether or not it will be used in real malicious campaigns.
+UnblockableChains is a POC project of a fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communications by using smart contract as intermediate. It was developed as a research project to evaluate this communication channel in order to test its feasibility and wether or not blockchain might actually be used in real malicious campaigns.
+
 By leveraging the blockchain as intermediate, the infrastructure is virtually unstoppable, dealing with most of the shortcoming of regular malicious infrastructures. Namely:
 - Secure communications – Immune to data modifications, eavesdropping, MITM, replay attacks (V)
 - High availability – node can always find the C&C (V)
@@ -62,15 +63,16 @@ Linux: `venv\Scripts\activate`
 # Usage 
 Following instruction are for **linux**. For Windows just replace / with \ in paths
 ### Using the CLI
-Edit the deployment script (optional) at `conf/deployment/DeploymentConf.BASE.yaml`
+Edit the deployment script (optional):
+
+`conf/deployment/DeploymentConf.BASE.yaml`
 
 Run the server bootstrap script. It will generate owner account, run a local full geth node, deploy the smart contract and create all necessary configuration to run controller UI. Optional:
 
-`export PYTHONPATH=./src && python3 src/Server/DeployUnstoppableCnC.py .`
-
+`export PYTHONPATH=./src && python3 src/Server/DeployUnstoppableCnC.py .`  (use -h for more options)
 Run the server in interactive mode & use the `sc` object to issue commands:
 
-`python3 -i src/Server/ServerCommands.py .`
+`python3 -i src/Server/ServerCommands.py .`   (use -h for more options)
 
 * Available commands: 
 -- generateNewClientInstance (clientConfTemplateFile, fundValue, clientNodeRpcPort)
@@ -86,7 +88,7 @@ Generate a new bot client instance:
 Note the generated wallet address. Implant will be placed under `./generated/<GeneratedWalletAddress>`
 Transfer the implant generated directory to destination machine and run it:
 
-`export PYTHONPATH=./src && python3 -i ./src/Client/ClientCommands.py . ./conf/clientConf.yaml`
+`export PYTHONPATH=./src && python3 -i ./src/Client/ClientCommands.py . ./conf/clientConf.yaml`   (use -h for more options)
 
 Client will run its own node, sync in light mode, contact the contract and register with it. If successful, it will start a listener for incoming commands.
 
