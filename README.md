@@ -63,6 +63,11 @@ Linux: `venv\Scripts\activate`
 # Usage 
 Following instruction are for **linux**. For Windows just replace / with \ in paths
 ### Using the CLI
+Convert `conf/` files to Linux path format:
+
+`sed -i -e 's.\\./.g' conf/deployment/DeploymentConf.BASE.yaml`
+`sed -i -e 's.\\./.g' conf/clientGen/ClientConf.BASE.yaml`
+
 Edit the deployment script (optional):
 
 `conf/deployment/DeploymentConf.BASE.yaml`
