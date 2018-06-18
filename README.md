@@ -43,7 +43,7 @@ This project was created for Educational and Research purposes only. Its only pu
 # Installation
 Runs on linux or Windows 10 (with linux subsystem installed) only.
 
-`git clone https://github.com/platdrag/UnblockableChains`
+`git clone --depth 1 https://github.com/platdrag/UnblockableChains`
 
 `cd UnblockableChains`
 
