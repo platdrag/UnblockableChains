@@ -43,7 +43,7 @@ This project was created for Educational and Research purposes only. Its only pu
 # Installation
 Runs on linux or Windows 10 (with linux subsystem installed) only.
 
-`git clone --depth 1 https://github.com/platdrag/UnblockableChains`
+`git clone https://github.com/platdrag/UnblockableChains`
 
 `cd UnblockableChains`
 
@@ -65,8 +65,7 @@ Following instruction are for **linux**. For Windows just replace / with \ in pa
 ### Using the CLI
 Convert `conf/` files to Linux path format:
 
-`sed -i -e 's.\\./.g' conf/deployment/DeploymentConf.BASE.yaml`
-`sed -i -e 's.\\./.g' conf/clientGen/ClientConf.BASE.yaml`
+`sed -i -e 's.\\./.g' conf/deployment/DeploymentConf.BASE.yaml && sed -i -e 's.\\./.g' conf/clientGen/ClientConf.BASE.yaml`
 
 Edit the deployment script (optional):
 
