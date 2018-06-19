@@ -1,5 +1,7 @@
 from web3 import Web3
-from .WalletOperations import encode_hex
+#from .WalletOperations import encode_hex
+from rlp.utils import decode_hex,encode_hex
+
 
 def bytes2Hex(string) -> str:
 	return '0x' + encode_hex(string)
