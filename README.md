@@ -1,5 +1,8 @@
+# Unblockable Chains
+
+
 # About
-UnblockableChains is a POC project of a fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communications by using smart contract as intermediate. It was developed as a research project to evaluate this communication channel in order to test its feasibility and wether or not blockchain might actually be used in real malicious campaigns.
+Unblockable Chains is a POC project of a fully functional C&C infrastructure on top of the public Ethereum network. The POC demonstrates a novel channel for implant and controller communications by using smart contract as intermediate. It was developed as a research project to evaluate this communication channel in order to test its feasibility and wether or not blockchain might actually be used in real malicious campaigns.
 
 By leveraging the blockchain as intermediate, the infrastructure is virtually unstoppable, dealing with most of the shortcoming of regular malicious infrastructures. Namely:
 - Secure communications – Immune to data modifications, eavesdropping, MITM, replay attacks (V)
