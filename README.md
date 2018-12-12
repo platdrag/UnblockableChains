@@ -22,6 +22,9 @@ Demo Video:
 
 [![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://youtu.be/JLUM2BbzBqs)
 
+Slides:
+- ![Unblockable chains 2018](https://github.com/platdrag/UnblockableChains/raw/master/res/media/Unblockable%20Chains.2018.pdf)
+
 Presentation Videos:
 - ![BsidesTLV 2018](https://www.youtube.com/watch?v=1O29jkuvnvs)
 - ![Sector.ca](https://sector.ca/sessions/unblockable-chains-is-blockchain-the-ultimate-malicious-infrastructure/)
