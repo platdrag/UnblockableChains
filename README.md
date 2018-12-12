@@ -22,6 +22,10 @@ Demo Video:
 
 [![DEMO](https://img.youtube.com/vi/82BalW09F54/0.jpg)](https://youtu.be/JLUM2BbzBqs)
 
+Presentation Videos:
+- ![BsidesTLV 2018](https://www.youtube.com/watch?v=1O29jkuvnvs)
+- ![Sector.ca](https://sector.ca/sessions/unblockable-chains-is-blockchain-the-ultimate-malicious-infrastructure/)
+
 
 # Disclaimer
 This project was created for Educational and Research purposes only. Its only purpose is to educate the security community of new and possibly emerging vector that attackers might use in the future. Illegal use of this and its variants or inclusion of it in illegal activities is not encouraged by its author (and was activly discouraged by removing some key components, see what is not included section below).  
